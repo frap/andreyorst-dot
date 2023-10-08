@@ -1,0 +1,11 @@
+*~
+*#
+.config/emacs/*
+!.config/emacs/init.el
+!.config/emacs/early-init.el
+!.config/emacs/.mc-lists.el
+!.config/emacs/disabled.el
+!.config/emacs/transient/
+.config/emacs/transient/*
+!.config/emacs/transient/values.el
+.recentf

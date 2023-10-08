@@ -1,0 +1,67 @@
+#!/usr/bin/env sh
+# Package manager wrappers
+
+pm_dnf() {
+    cmd="$1"
+    shift
+    case "$cmd" in
+        (install)    sudo dnf install "$@" ;;
+        (update)     sudo dnf upgrade "$@" ;;
+        (remove)     sudo dnf remove "$@" ;;
+        (autoremove) sudo dnf autoremove "$@" ;;
+        (search)     dnf search "$@" ;;
+        (copr)       sudo dnf copr "$@" ;;
+        (list)       case $1 in
+                         (all)       dnf list all ;;
+                         (installed) dnf list installed ;;
+                         (*)         echo "wrong argument for 'list'" >&2
+                                     exit 1 ;;
+                     esac ;;
+        (*)          dnf "$cmd" "$@" ;;
+    esac
+}
+
+pm_yum() {
+    cmd="$1"
+    shift
+    case "$cmd" in
+        (install) sudo yum install "$@" ;;
+        (update)  sudo yum update "$@" ;;
+        (remove)  sudo yum remove "$@" ;;
+        (search)  yum search "$@" ;;
+        (*)       yum "$cmd" "$@" ;;
+    esac
+}
+
+pm_rpm_ostree() {
+    cmd="$1"
+    shift
+    case "$cmd" in
+        (install) rpm-ostree install "$@" ;;
+        (update)  rpm-ostree upgrade "$@" ;;
+        (remove)  rpm-ostree remove "$@" ;;
+        (*)       rpm-ostree "$cmd" "$@" ;;
+    esac
+}
+
+pm_apt() {
+    cmd="$1"
+    shift
+    case "$cmd" in
+        (install)     sudo apt install "$@" ;;
+        (update)      sudo apt update "$@" ;;
+        (remove)      sudo apt remove "$@" ;;
+        (autoremove)  sudo apt autoremove "$@" ;;
+        (search)      apt search "$@" ;;
+        (*)           sudo apt "$cmd" "$@" ;;
+    esac
+}
+
+for pm in rpm-ostree dnf yum apt; do
+    if [ -n "$(command -v $pm)" ]; then
+        alias pm="pm_\$(echo \$pm | sed 's/[^a-zA-Z_]/_/g')"
+        break
+    fi
+done
+
+pm $@

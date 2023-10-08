@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+erun() { echo "$*" ; "$@" ; }
+
+DOTFILES="$(realpath "$(dirname "$0")"/../)"
+
+erun ls -la

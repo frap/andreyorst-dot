@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+erun() { echo "$*" ; "$@" ; }
+
+DOTFILES="$(realpath "$(dirname "$0")"/../)"
+
+case $1 in
+    (termux) (if [ -d "$HOME"/.termux ]; then
+                  shopt -s dotglob
+                  for file in "$DOTFILES"/.termux/*; do
+                      erun ln -sf "$file" "$HOME"/.termux/
+                  done
+              fi)
+             ;;
+    (*) (for file in "$DOTFILES"/.*; do
+             if [ -f "$file" ] && [ "$(basename "$file")" != ".gitignore" ]; then
+                 erun ln -sf "$file" "$HOME"/
+             fi
+         done
+         (for dir in ".config" ".local/bin" ".local/share/applications"; do
+              if [ -d "$DOTFILES/$dir" ]; then
+                  erun mkdir -p "$HOME/$dir"
+                  shopt -s dotglob
+                  for file in "$DOTFILES/$dir"/*; do
+                      erun ln -sf "$file" "$HOME/$dir"/
+                  done
+              fi
+          done))
+        $0 termux
+        ;;
+esac
