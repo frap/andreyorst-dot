@@ -10,7 +10,8 @@
 ;;; Code:
 
 (setq
- gc-cons-threshold most-positive-fixnum
+ gc-cons-threshold most-positive-fixnum  ; 2^61 bytes
+ gc-cons-percentage 0.6
  read-process-output-max (* 1024 1024 4) ; 4mb
  inhibit-compacting-font-caches t
  message-log-max 16384
@@ -36,7 +37,10 @@
             (delete-dups (append file-name-handler-alist
                                  restore-file-name-handler-alist)))))
 
-  (add-hook 'emacs-startup-hook #'restore-file-handler-alist 101)
+  (add-hook 'emacs-startup-hook (lambda ()
+                                  (setq restore-file-handler-alist 101
+                                        gc-con-threshold 33554432 ; 32 mb
+                                        gc-cons-percentage 0.1)))
 
   (when (fboundp #'tool-bar-mode)
     (tool-bar-mode -1))
