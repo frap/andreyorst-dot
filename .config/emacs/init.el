@@ -1563,6 +1563,18 @@ specific project."
                      (looking-back "." 1))
             (lisp-eval-last-sexp)))))))
 
+(use-package json-mode
+  :ensure t)
+
+(use-package restclient
+  :ensure t
+  :mode (("\\.http\\'" . restclient-mode))
+  :bind (:map restclient-mode-map
+          ("C-c C-f" . json-mode-beautify)))
+
+(use-package restclient-jq
+  :ensure t)
+
 (use-package sly
   :ensure t
   :hook (sly-mrepl-mode . common-lisp-modes-mode)
@@ -1783,10 +1795,34 @@ specific project."
   (vundo-roll-back-on-quit nil)
   (vundo--window-max-height 10))
 
+(use-package terraform-mode
+  :ensure t)
+
 (use-package yasnippet
   :ensure t
   :defer t
-  :delight yas-minor-mode)
+    :commands (yas-minor-mode-on
+             yas-expand
+             yas-expand-snippet
+             yas-lookup-snippet
+             yas-insert-snippet
+             yas-new-snippet
+             yas-visit-snippet-file
+             yas-reload-all
+             yas-dropdown-prompt
+             yas--all-templates
+             yas--get-snippet-tables
+             yas--template-key)
+    :delight yas-minor-mode
+      :hook ((text-mode . yas-minor-mode-on)
+         (prog-mode . yas-minor-mode-on)
+         (conf-mode . yas-minor-mode-on)
+         (snippet-mode . yas-minor-mode-on))
+      :config
+  (setq yas-prompt-functions (delq #'yas-dropdown-prompt
+                                   yas-prompt-functions)
+       ;; yas-snippet-dirs '(file-templates-dir)
+    ))
 
 
 ;;; Tools
