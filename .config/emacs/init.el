@@ -1005,13 +1005,23 @@ Search is based on regular expressions in the
   :preface
   (defvar consult-prefix-map (make-sparse-keymap))
   (fset 'consult-prefix-map consult-prefix-map)
-  :bind ( :map ctl-x-map
+  :bind ( ("M-y"         . consult-yank-pop)
+          ("M-g g"       . consult-goto-line)
+          :map ctl-x-map
+          ("b" . consult-buffer)
           ("c" . consult-prefix-map)
+          ("C-k C-k" . consult-kmacro)
           :map consult-prefix-map
           ("r" . consult-recent-file)
           ("o" . consult-outline)
           ("i" . consult-imenu)
-          ("g" . consult-grep))
+          ("g" . consult-grep)
+          :map dired-mode-map
+         ("O" . consult-file-externally)
+         :map help-map
+         ("a" . consult-apropos)
+         :map minibuffer-local-map
+         ("M-r" . consult-history))
   :custom
   (consult-preview-key nil)
   :init
