@@ -1,0 +1,29 @@
+{;; Clojure format
+ ;; https://github.com/weavejester/cljfmt
+
+ :cljfmt
+ {;; correct indentation - see cljfm indents
+  :indentation?                          true
+
+  ;; remove whitespace surrounding inner forms
+  :remove-surrounding-whitespace?        true
+
+  ;; remove trailing whitespace in lines
+  :remove-trailing-whitespace?           true
+
+  ;; insert whitespace missing from between elements
+  :insert-missing-whitespace?            true
+
+  ;; Delete more than one consecutive blank line - annoying
+  :remove-consecutive-blank-lines?       false
+
+  ;; Remove spaces not used for indentation
+  :remove-multiple-non-indenting-spaces? true
+
+  ;; break hashmaps onto multiple lines
+  :split-keypairs-over-multiple-lines?   true
+
+  ;; Use #re for regex indents configuration
+  ;; :cljfmt {:indents {#re ".*" ns [[:inner 0] [:inner 1]]}}
+  :indents {}}}
+

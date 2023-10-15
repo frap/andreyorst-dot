@@ -6,4 +6,6 @@
  :text-document-sync-kind :full
  :auto-add-ns-to-new-files? false
  :lint-project-files-after-startup? false
- :dependency-scheme "jar"}
+ :dependency-scheme "jar"
+ :cljfmt-config-path "cljfmt.edn"
+ }
