@@ -1083,8 +1083,13 @@ Search is based on regular expressions in the
 (use-package org
   :hook ((org-babel-after-execute . org-redisplay-inline-images))
   :bind ( :map org-mode-map
+          ("C-c c" . org-capture)
+          ("C-c a" . org-agenda)
+          ("C-c l" . org-store-link)
           ("M-Q" . split-pararagraph-into-lines)
-          ("C-c l" . org-store-link))
+          :map org-src-mode-map
+           ("C-x w" . org-edit-src-exit)
+           ("C-x C-s" . org-edit-src-exit))
   :custom-face
   (org-block ((t (:extend t))))
   (org-block-begin-line
