@@ -7,9 +7,6 @@
 ;;; Commentary:
 ;; Emacs 29.1+ configuration.
 
-
-
-
 (defun gas/display-startup-time ()
   (message "Emacs chargé dans %s avec %d ramasse-miettes."
            (format "%.2f secondes"
@@ -702,6 +699,21 @@ disabled, or enabled and the mark is active."
 
 (use-package paren
   :hook (prog-mode . show-paren-mode))
+
+(use-package rainbow-delimiters
+  :ensure t
+  :delight t
+  :hook ((cider-repl-mode
+          clojurex-mode
+          clojurescript-mode
+          clojurec-mode
+          clojure-mode
+          emacs-lisp-mode
+          lisp-data-mode
+          sly-mprepl-mode
+          lisp-interaction-mode
+          inferior-emacs-lisp-mode)
+         . rainbow-delimiters-mode))
 
 (use-package vc-hooks
   :defer t
