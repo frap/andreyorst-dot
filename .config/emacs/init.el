@@ -7,14 +7,24 @@
 ;;; Commentary:
 ;; Emacs 29.1+ configuration.
 
+
+
+
+(defun gas/display-startup-time ()
+  (message "Emacs chargé dans %s avec %d ramasse-miettes."
+           (format "%.2f secondes"
+                   (float-time
+                    (time-subtract after-init-time before-init-time)))
+           gcs-done))
+
+(add-hook 'emacs-startup-hook #'gas/display-startup-time)
 ;;; Code:
 ;; User Identify (optional)
 ;; e.g. GPG configuration, email clients, file templates and snippets
- (setq
-    user-full-name "Andrés Gasson"
-    user-mail-address "gas@troveplatform.co.nz"
-    github-account-name "frap")
-
+(setq
+ user-full-name "Andrés Gasson"
+ user-mail-address "gas@troveplatform.co.nz"
+ github-account-name "frap")
 
 (use-package use-package
   :no-require
@@ -44,18 +54,16 @@
         (setenv var value))
       (setq lst (cdr lst)))))
 
-(use-package exec-path-from-shell
-  :if (memq window-system '(mac ns x))
-  :config
-  (dolist (envvar '("PATH" "GOPATH" "GOROOT" "AWS_REGION" "PYENV_ROOT"))
-    (add-to-list 'exec-path-from-shell-variables envvar))
-  (exec-path-from-shell-initialize))
+(if (not (getenv "TERM_PROGRAM"))
+    (setenv "PATH"
+      (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
+(setq exec-path (split-string (getenv "PATH") ":"))
 
 (use-package local-config
   :no-require
   :preface
   (defgroup local-config ()
-    "Customization group for local settings."
+    "Customisation group for local settings."
     :prefix "local-config-"
     :group 'emacs)
   (defcustom local-config-dark-theme 'modus-vivendi
@@ -77,7 +85,6 @@
 
 (use-package functions
   :no-require
-  :functions (dbus-color-theme-dark-p)
   :preface
   (require 'subr-x)
   (defun split-pararagraph-into-lines ()
@@ -171,9 +178,16 @@ If LOCAL-PORT is nil, PORT is used as local port."
      cursor-type 'box
      cursor-in-non-selected-windows nil))
   (setq
-   ring-bell-function 'ignore
+   ring-bell-function 'ignore ;turn off the bell noise
    mode-line-percent-position nil
    enable-recursive-minibuffers t)
+  (when (equal system-type 'darwin)
+    ;; Configure mac modifiers to be what I expect
+    (with-no-warnings
+      (setq  ns-command-modifier 'super
+             ns-option-modifier 'meta
+             ns-right-option-modifier 'nil
+             ns-right-command-modifier 'nil)))
   (when (version<= "27.1" emacs-version)
     (setq bidi-inhibit-bpa t))
   (provide 'defaults))
@@ -284,14 +298,22 @@ applied to the name.")
   (defun font-installed-p (font-name)
     "Check if a font with FONT-NAME is available."
     (find-font (font-spec :name font-name)))
+  (setq resolution-factor (eval (/ (x-display-pixel-height) 1000.0)))
   (defun setup-fonts ()
-    (cond ((font-installed-p "JetBrainsMono")
-           (set-face-attribute 'default nil :font "JetBrainsMono"))
-          ((font-installed-p "Fira Code")
-           (set-face-attribute 'default nil :font "Fira Code")))
-    (when (font-installed-p "DejaVu Sans")
-      (set-face-attribute 'variable-pitch nil :font "DejaVu Sans")))
-  (provide 'font))
+    (cond ((font-installed-p "JetBrains Mono")
+           (set-face-attribute 'default nil :font "JetBrains Mono")) ;; :size (eval (round (* 14 resolution-factor)))
+          ((font-installed-p "Iosevka Curly")
+           (set-face-attribute 'default nil :font "Iosevka Curly")))
+    (when (font-installed-p "Overpass")
+      (set-face-attribute 'variable-pitch nil :font "Overpass")))
+   ;; When Emacs is ran in GUI mode, configure common Emoji fonts, making it more
+   ;; likely that Emoji will work out of the box
+   (when (display-graphic-p)
+     (set-fontset-font t 'symbol "Apple Color Emoji")
+     (set-fontset-font t 'symbol "Noto Color Emoji" nil 'append)
+     (set-fontset-font t 'symbol "Segoe UI Emoji" nil 'append)
+     (set-fontset-font t 'symbol "Symbola" nil 'append))
+   (provide 'font))
 
 (use-package cus-edit
   :custom
@@ -409,13 +431,6 @@ Based on `so-long-detected-long-line-p'."
 (use-package savehist
   :hook (after-init . savehist-mode))
 
-(use-package mule-cmds
-  :no-require
-  :custom
-  (default-input-method 'russian-computer)
-  :init
-  (prefer-coding-system 'utf-8))
-
 (use-package select
   :no-require
   :when (display-graphic-p)
@@ -437,7 +452,7 @@ Based on `so-long-detected-long-line-p'."
   (blink-matching-delay 0)
   (blink-matching-paren t)
   (copy-region-blink-delay 0)
-  (shell-command-default-error-buffer "*Shell Command Errors*")
+  (shell-command-default-error-buffer "*Commands Shell Erreurs*")
   :config
   (defun overwrite-mode-set-cursor-shape ()
     (when (display-graphic-p)
@@ -501,6 +516,22 @@ disabled, or enabled and the mark is active."
 (use-package bindings
   :bind ( :map ctl-x-map
           ("C-d" . dired-jump))
+  :preface
+  ;; set global keybindings
+  ;;; window management
+  (global-set-key (kbd "M-p") (kbd "C-- C-x o"))
+  (global-set-key (kbd "M-n") (kbd "C-x o"))
+  (global-set-key (kbd "M-j") 'windmove-down)
+  (global-set-key (kbd "M-k") 'windmove-up)
+  (global-set-key (kbd "M-h") 'windmove-left)
+  (global-set-key (kbd "M-l") 'windmove-right)
+  ;;; copy & eval
+  (global-set-key (kbd "s-v") 'clipboard-yank)
+  (global-set-key (kbd "s-k") 'kill-current-buffer)
+  (global-set-key (kbd "s-e") 'eval-region)
+  (global-set-key (kbd "s-b") 'eval-buffer)
+  (global-set-key (kbd "s-c") 'ns-copy-including-secondary)
+  (global-set-key (kbd "M-v") 'clipboard-yank)
   :init
   (setq mode-line-end-spaces nil))
 
@@ -543,6 +574,15 @@ disabled, or enabled and the mark is active."
      (internal-border-width . 2)
      (border-width . 1)
      (no-special-glyphs . t))))
+
+;; paste in text terminalform gui
+(when (and (not (display-graphic-p))
+           (executable-find "xclip"))
+  (use-package xclip
+    :config
+    (when (executable-find xclip-program)
+      (with-no-warnings
+        (xclip-mode t)))))
 
 (use-package modus-themes
   :ensure t
@@ -604,6 +644,21 @@ disabled, or enabled and the mark is active."
        local-config-dark-theme
      local-config-light-theme)
    t))
+
+(use-package all-the-icons
+  :ensure t
+  :if (display-graphic-p)
+  :after (marginalia dired)
+  :init
+  (add-hook 'marginalia-mode #'all-the-icons-completion-marginalia-setup)
+  (add-hook 'dired-mode #'all-the-icons-dired-mode)
+  :config
+  (use-package all-the-icons-dired
+    :ensure t)
+  (use-package all-the-icons-completion
+    :ensure t)
+  :config
+  (all-the-icons-completion-mode 1))
 
 (use-package uniquify
   :defer t
@@ -815,14 +870,18 @@ Search is based on regular expressions in the
   (help-window-select t))
 
 (use-package  which-key
-    :hook (after-init . which-key-mode)
+  :hook (after-init . which-key-mode)
+  :init
+    (setq which-key-sort-order #'which-key-key-order-alpha
+        which-key-sort-uppercase-first nil
+        which-key-add-column-padding 1
+        which-key-max-display-columns nil
+        which-key-min-display-lines 6
+        which-key-side-window-slot -10)
     :config
-    (which-key-mode 1)
-    (setq which-key-add-column-padding 2)
-    (setq which-key-idle-delay 0.5)
+    (setq which-key-idle-delay 0.2)
     (setq which-key-idle-secondary-delay 0.1)
-    (setq which-key-max-display-columns nil)
-    (setq which-key-min-display-lines 6)
+    (which-key-setup-side-window-bottom)
     (setq which-key-replacement-alist
           '((("left") . ("🡸"))
             (("right") . ("🡺"))
@@ -831,10 +890,7 @@ Search is based on regular expressions in the
             (("delete") . ("DEL"))
             (("\\`DEL\\'") . ("BKSP"))
             (("RET") . ("⏎"))
-            (("next") . ("PgDn"))
-            (("prior") . ("PgUp"))))
-    (setq which-key-sort-order 'which-key-key-order-alpha)
-    (setq which-key-sort-uppercase-first nil)
+            ))
     (which-key-setup-minibuffer)
     ;;  (:with-hook which-key-init-buffer-hook
     ;;  (:hook (lambda (setq line-spacing 4))))
@@ -1144,15 +1200,25 @@ Search is based on regular expressions in the
   :hook ((emacs-lisp-mode . eldoc-mode)
          (emacs-lisp-mode . common-lisp-modes-mode)))
 
+(use-package pprint-to-buffer
+  :vc (:url "https://github.com/plexus/plexmacs.git"
+       :rev :newest
+       :lisp-dir "pprint-to-buffer/"))
+
 (use-package racket-mode
   :ensure t
   :hook ((racket-mode racket-repl-mode) . common-lisp-modes-mode))
 
 (use-package yaml-mode
-  :ensure t
-  :defer t
-  :custom
-  (yaml-indent-offset 4))
+   :mode ("\\.yml\\'" . yaml-mode)
+   :ensure t
+   :defer t
+   :custom
+   (yaml-indent-offset 2)
+   :config
+   (add-hook 'yaml-mode-hook
+             '(lambda ()
+                (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
 
 (use-package css-mode
   :defer t
@@ -1163,6 +1229,20 @@ Search is based on regular expressions in the
   :defer t
   :custom
   (js-indent-level 2))
+
+;; (use-package typescript-mode
+;;   :after tree-sitter
+;;   :config
+;;   ;; we choose this instead of tsx-mode so that eglot can automatically figure out language for server
+;;   ;; see https://github.com/joaotavora/eglot/issues/624 and https://github.com/joaotavora/eglot#handling-quirky-servers
+;;   (define-derived-mode typescriptreact-mode typescript-mode
+;;     "TypeScript TSX")
+
+;;   ;; use our derived mode for tsx files
+;;   (add-to-list 'auto-mode-alist '("\\.tsx?\\'" . typescriptreact-mode))
+;;   ;; by default, typescript-mode is mapped to the treesitter typescript parser
+;;   ;; use our derived mode to map both .tsx AND .ts -> typescriptreact-mode -> treesitter tsx
+;;   (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
 
 (use-package csv-mode
   :ensure t
@@ -1239,7 +1319,14 @@ Search is based on regular expressions in the
   (defun clojure-mode-setup ()
     "Setup Clojure buffer."
     (common-lisp-modes-mode 1)
-    (clojure-set-compile-command)))
+    (clojure-set-compile-command))
+  :config
+  ;; (setq clojure-toplevel-inside-comment-form t
+  ;;       ;; Because of CIDER's insistence to send forms to all linked REPLs, we
+  ;;       ;; *have* to be able to switch cljc buffer to clj/cljs mode without
+  ;;       ;; cider complaining.
+  ;;       clojure-verify-major-mode nil)
+  )
 
 (use-package cider
   :ensure t
@@ -1309,7 +1396,115 @@ See `cider-find-and-clear-repl-output' for more info."
     (cider-nrepl-request:eval "(portal.api/clear)" #'ignore))
   (defun cider-close-portal ()
     (interactive)
-    (cider-nrepl-request:eval "(portal.api/close)" #'ignore)))
+    (cider-nrepl-request:eval "(portal.api/close)" #'ignore))
+  ;; Show emacs-lisp eval results in an overlay, CIDER style.
+  ;; https://endlessparentheses.com/eval-result-overlays-in-emacs-lisp.html
+  ;; We rely on CIDER to do the heavy lifting, can't seem to find a general library
+  ;; for doing this style of overlays.
+  (defun corgi/eval-overlay (value point)
+    (cider--make-result-overlay (format "%S" value)
+      :where point
+      :duration 'command)
+    ;; Preserve the return value.
+    value)
+
+(advice-add 'eval-region :around
+            (lambda (f beg end &rest r)
+              (corgi/eval-overlay
+               (apply f beg end r)
+               end)))
+
+(advice-add 'eval-last-sexp :filter-return
+            (lambda (r)
+              (corgi/eval-overlay r (point))))
+
+(advice-add 'eval-defun :filter-return
+            (lambda (r)
+              (corgi/eval-overlay
+               r
+               (save-excursion
+                 (end-of-defun)
+                 (point)))))
+)
+
+(use-package clj-ns-name
+  :vc (:url "https://github.com/corgi-emacs/clj-ns-name.git")
+  :config
+  (clj-ns-name-install))
+
+(use-package walkclj
+  :vc (:url "https://github.com/corgi-emacs/walkclj.git"))
+
+;; Most annoying JVM "feature" of all time
+;; https://docs.cider.mx/cider/troubleshooting.html#empty-java-stacktraces
+(defun corgi/around-cider-jack-in-global-options (command project-type)
+  (if (eq 'clojure-cli project-type)
+      (concat cider-clojure-cli-global-options
+              " -J-XX:-OmitStackTraceInFastThrow")
+    (funcall command project-type)))
+
+(advice-add #'cider-jack-in-global-options :around #'corgi/around-cider-jack-in-global-options)
+
+(defun corgi/cider-pprint-eval-register (register)
+  "Evaluate a Clojure snippet stored in a register.
+
+Will ask for the register when used interactively. Put `#_clj' or
+`#_cljs' at the start of the snippet to force evaluation to go to
+a specific REPL type, no matter the mode (clojure-mode or
+clojurescript-mode) of the current buffer.
+
+You can use {{...}} to insert emacs-lisp code that will get
+evaluated, like `(println \"{{buffer-file-name}}\")'.
+"
+  (interactive (list (register-read-with-preview "Eval register: ")))
+  (let ((reg (replace-regexp-in-string
+              "{{\\([^}]+\\)}}"
+              (lambda (s)
+                (eval
+                 (read
+                  (match-string 1 s))))
+              (get-register register))))
+    (cond
+     ((string-match-p "^#_cljs" reg)
+      (with-current-buffer (car (cider-repls 'cljs))
+        (cider--pprint-eval-form reg)))
+     ((string-match-p "^#_clj" reg)
+      (with-current-buffer (car (cider-repls 'clj))
+        (cider--pprint-eval-form reg)))
+     (t
+      (cider--pprint-eval-form reg)))))
+
+(defun corgi/cider-jack-in-babashka (&optional project-dir)
+  "Start a utility CIDER REPL backed by Babashka, not related to a
+specific project."
+  (interactive)
+  (let ((project-dir (or project-dir user-emacs-directory)))
+    (nrepl-start-server-process
+     project-dir
+     "bb --nrepl-server 0"
+     (lambda (server-buf)
+       (set-process-query-on-exit-flag
+        (get-buffer-process server-buf) nil)
+       (cider-nrepl-connect
+        (list :repl-buffer server-buf
+              :repl-type 'clj
+              :host (plist-get nrepl-endpoint :host)
+              :port (plist-get nrepl-endpoint :port)
+              :project-dir project-dir
+              :session-name "babashka"
+              :repl-init-function (lambda ()
+                                    (setq-local cljr-suppress-no-project-warning t
+                                                cljr-suppress-middleware-warnings t
+                                                process-query-on-exit-flag nil)
+                                    (set-process-query-on-exit-flag
+                                     (get-buffer-process (current-buffer)) nil)
+                                    (rename-buffer "*babashka-repl*"))))))))
+
+;; Create a *scratch-clj* buffer for evaluating ad-hoc Clojure expressions. If
+;; you make sure there's always a babashka REPL connection then this is a cheap
+;; way to always have a place to type in some quick Clojure expression evals.
+(with-current-buffer (get-buffer-create "*scratch-clj*")
+  (clojure-mode))
 
 (use-package ob-clojure
   :after (cider org)
@@ -1389,6 +1584,7 @@ See `cider-find-and-clear-repl-output' for more info."
   (lsp-keymap-prefix "C-c l")
   (lsp-auto-configure nil)
   (lsp-diagnostics-provider :flymake)
+  (lsp-modeline-diagnostics-enable t)
   (lsp-completion-provider :none)
   (lsp-session-file (locate-user-emacs-file ".lsp-session"))
   (lsp-log-io nil)
@@ -1398,6 +1594,10 @@ See `cider-find-and-clear-repl-output' for more info."
   (lsp-signature-doc-lines 1)
   :init
   (setq lsp-use-plists t))
+
+(use-package lsp-ui
+  :demand t
+  :commands lsp-ui-mode)
 
 (use-package lsp-completion
   :no-require
@@ -1428,18 +1628,6 @@ See `cider-find-and-clear-repl-output' for more info."
           clojurec-mode
           clojurescript-mode)
          . lsp))
-
-(use-package lsp-java
-  :ensure t
-  :hook (java-mode . lsp))
-
-(use-package lsp-metals
-  :ensure t
-  :custom
-  (lsp-metals-server-args
-   '("-J-Dmetals.allow-multiline-string-formatting=off"))
-  :hook (scala-mode . lsp))
-
 
 ;;; Navigation & Editing
 
@@ -1487,7 +1675,7 @@ See `cider-find-and-clear-repl-output' for more info."
           ("C-M-<left>" . puni-slurp-backward)
           ("C-{" . puni-barf-backward)
           ("C-M-<right>" . puni-barf-backward)
-          ;; depth chaning
+          ;; depth chaining
           ("M-r" . puni-raise)
           ("M-s" . puni-splice)
           ("M-<up>" . puni-splice-killing-backward)
@@ -1662,15 +1850,82 @@ means save all with no questions."
   :ensure t
   :hook (eshell-load . eat-eshell-mode))
 
+(defun vcs-quit (&optional _kill-buffer)
+  "Clean up magit buffers after quitting `magit-status'.
+    And don't forget to refresh version control in all buffers of
+    current workspace."
+  (interactive)
+  (quit-window)
+  (unless (cdr
+           (delq nil
+         (mapcar (lambda (win)
+               (with-selected-window win
+                 (eq major-mode 'magit-status-mode)))
+             (window-list))))
+    (when (fboundp 'magit-mode-get-buffers)
+      (mapc #'vcs--kill-buffer (magit-mode-get-buffers)))))
+
+(defun vcs--kill-buffer (buffer)
+  "Gracefully kill `magit' BUFFER.
+    If any alive process is related to this BUFFER, wait for 5
+    seconds before nuking BUFFER and the process. If it's dead -
+    don't wait at all."
+  (when (and (bufferp buffer) (buffer-live-p buffer))
+    (let ((process (get-buffer-process buffer)))
+      (if (not (processp process))
+          (kill-buffer buffer)
+        (with-current-buffer buffer
+          (if (process-live-p process)
+              (run-with-timer 5 nil #'vcs--kill-buffer buffer)
+            (kill-process process)
+            (kill-buffer buffer)))))))
+
 (use-package magit
   :ensure t
+    :defer t
+  :bind ("C-c g" . magit-status)
+  :defines (magit-status-mode-map
+            magit-revision-show-gravatars
+            magit-display-buffer-function
+            magit-diff-refine-hunk)
+  :commands (magit-display-buffer-same-window-except-diff-v1
+             magit-stage-file
+             magit-unstage-file)
+  :init
+  (setq-default magit-git-executable (executable-find "git"))
   :hook (git-commit-mode . flyspell-mode)
   :bind ( :map project-prefix-map
           ("m" . magit-project-status))
   :custom
   (magit-ediff-dwim-show-on-hunks t)
   (magit-diff-refine-ignore-whitespace t)
-  (magit-diff-refine-hunk 'all))
+  (magit-diff-refine-hunk 'all)
+  :config
+  (setq-default vc-follow-symlinks t)
+  ;; properly kill leftover magit buffers on quit
+  (define-key magit-status-mode-map
+    [remap magit-mode-bury-buffer]
+    #'vcs-quit)
+ (setq magit-revision-show-gravatars
+        '("^Author:     " . "^Commit:     ")
+        magit-display-buffer-function
+        #'magit-display-buffer-same-window-except-diff-v1
+        ;; show word-granularity on selected hunk
+        magit-diff-refine-hunk t)
+  (setq git-commit-summary-max-length 120)
+  (setq magit-commit-show-diff nil)
+  (setq magit-delete-by-moving-to-trash nil)
+  (setq magit-display-buffer-function
+        #'magit-display-buffer-same-window-except-diff-v1)
+  (setq magit-log-auto-more t)
+  (setq magit-log-margin-show-committer-date t)
+  (setq magit-revert-buffers 'silent)
+  (setq magit-save-repository-buffers 'dontask)
+  (setq magit-wip-after-apply-mode t)
+  (setq magit-wip-after-save-mode t)
+  (setq magit-wip-before-change-mode t)
+  (setq transient-values
+        '((magit-log:magit-log-mode "--graph" "--color" "--decorate"))))
 
 (use-package magit
   :after project
@@ -1993,197 +2248,14 @@ dependency artifact based on the project's dependencies."
 
 ;;; Messaging
 
-(use-package erc
-  :defer t
-  :custom
-  (erc-hide-list '("JOIN" "PART" "QUIT"))
-  (erc-fill-function 'erc-fill-static)
-  (erc-fill-static-center 22)
-  (erc-fill-column 110)
-  :functions (erc-update-modules)
-  :autoload (erc-compute-server)
-  :preface
-  (defcustom erc-tunnel-conf nil
-    "Connection spec for IRC server behind an SSH tunnel.
-Can be used to connect to a bouncer running behind SSH.  A plist
-with the following keys:
-
-  :host - remote host.
-
-  :port - remote port.
-
-  :ssh-port - SSH port.
-              Optional, needed when SSH is running on a custom
-              port.
-
-The rest options for the tunnel are taken from ERC directly.  See
-the options: `erc-port' or `erc-default-port', and `erc-server'."
-    :tag "ERC tunnel configuration"
-    :type 'plist
-    :group 'erc)
-  (defcustom erc-pass ""
-    "Password to pass to the `erc' function."
-    :tag "ERC password for the bouncer"
-    :type 'string
-    :group 'erc)
-  (defun erc-setup-port-forwarding (conf)
-    "Setup a connection function based on plist CONF.
-Connection is specified by the keys :host, :port, and an optional
-:ssh-port. Returns a lambda which will call `start-process' with
-the generated command."
-    (when-let ((host (plist-get conf :host))
-               (port (plist-get conf :port)))
-      (let* ((name "erc-tunnel")
-             (buf (format " *%s-%s:%s*" name host port))
-             (cmd (format "ssh -L %s:%s:%s %s %s"
-                          (or erc-port erc-default-port)
-                          (or erc-server "localhost")
-                          port
-                          (if-let ((ssh-port (plist-get conf :ssh-port)))
-                              (format "-p %s" ssh-port)
-                            "")
-                          host)))
-        (lambda (&rest _)
-          (when (or (not (get-buffer buf))
-                    (not (get-buffer-process (get-buffer buf))))
-            (apply #'start-process name buf (split-string-shell-command cmd)))))))
-  (defun erc-connect ()
-    "Connect to the bouncer."
-    (interactive)
-    (erc :server (or erc-server (erc-compute-server))
-         :port (or erc-port erc-default-port)
-         :nick erc-nick
-         :password erc-pass))
-  :config
-  (add-to-list 'erc-modules 'notifications)
-  (add-to-list 'erc-modules 'spelling)
-  (erc-update-modules)
-  (when-let ((hook (erc-setup-port-forwarding erc-tunnel-conf)))
-    (add-hook 'erc-connect-pre-hook hook)))
-
-(use-package message
-  :defer t
-  :custom
-  (message-kill-buffer-on-exit t))
 
 (use-package message-view-patch
   :ensure t
   :hook (gnus-part-display . message-view-patch-highlight))
 
-(use-package smtpmail
-  :defer t)
-
-(use-package mu4e
-  :no-require
-  :load-path "/usr/share/emacs/site-lisp/mu4e/"
-  :when (executable-find "mu")
-  :defines mu4e-personal-addresses
-  :commands (mu4e mu4e-ask-maildir make-mu4e-context mu4e-context-current mu4e-get-maildirs)
-  :functions (mu4e-message-field mu4e-context-vars)
-  :requires seq
-  :custom
-  (mu4e-completing-read-function #'completing-read)
-  (mu4e-get-mail-command "mbsync -a")
-  (mu4e-change-filenames-when-moving t)
-  (mu4e-attachment-dir (expand-file-name "~/Downloads"))
-  (mu4e-sent-messages-behavior 'delete)
-  (mail-user-agent 'mu4e-user-agent)
-  (mu4e-view-show-images nil)
-  (mu4e-view-show-addresses t)
-  (mu4e-context-policy 'pick-first)
-  (mu4e-update-interval (* 30 60))
-  :preface
-  (defvar mail-contexts nil
-    "A list of plists with context related settings.
-
-     Each plist contains the following keywords:
-
-     - :inbox - directory for the mbsync inbox;
-     - :name - name of the inbox for mu4e to use as context name;
-     - :smtp-name - account email;
-     - :smtp-server - smtp server;
-     - :port - smtp server port;
-     - :address - account email;
-     - :signature - signature to use when composing emails.")
-  (defun make-mu4e-context-matcher (match-str)
-    (lambda (msg)
-      (when msg
-        (string-prefix-p match-str (mu4e-message-field msg :maildir)))))
-  (defun make-context (ctx)
-    (let ((inbox (plist-get ctx :inbox)))
-      (make-mu4e-context
-       :name (plist-get ctx :name)
-       :match-func (make-mu4e-context-matcher inbox)
-       :vars `((mu4e-sent-folder . ,(format "%s/Sent" inbox))
-               (mu4e-drafts-folder . ,(format "%s/Drafts" inbox))
-               (mu4e-trash-folder . ,(format "%s/Trash" inbox))
-               (mu4e-refile-folder . ,(format "%s/Archive" inbox))
-               (mu4e-compose-signature . ,(or (plist-get ctx :signature) user-full-name))
-               (mu4e-maildir-context . ,inbox)
-
-               (smtpmail-smtp-user . ,(plist-get ctx :smtp-name))
-               (smtpmail-local-domain . ,(plist-get ctx :smtp-server))
-               (smtpmail-smtp-server . ,(plist-get ctx :smtp-server))
-               (smtpmail-smtp-service . ,(plist-get ctx :port))
-
-               (user-mail-address . ,(plist-get ctx :address))
-               (send-mail-function . smtpmail-send-it)))))
-  (define-advice mu4e-get-maildirs (:around (fn) filter-maildirs-based-on-context)
-    "Filters maildirs for current active context based on maildir prefix."
-    (let* ((context-vars (mu4e-context-vars (mu4e-context-current)))
-           (current-maildir (alist-get 'mu4e-maildir-context context-vars)))
-      (if current-maildir
-          (seq-filter (lambda (maildir)
-                        (string-prefix-p current-maildir maildir))
-                      (funcall fn))
-        (funcall fn))))
-  :config
-  (defvar mu4e-contexts)
-  (when (load (locate-user-emacs-file "mail-contexts.el") 'noerror)
-    (setq mu4e-contexts (mapcar #'make-context mail-contexts)
-          user-mail-address (plist-get (car mail-contexts) :address)
-          mu4e-personal-addresses (mapcar (lambda (ctx) (plist-get ctx :address))
-                                          mail-contexts))))
-
-(use-package mu4e
-  :no-require
-  :after (orderless mu4e)
-  :functions (mu4e-ask-maildir@use-orderless)
-  :config
-  (define-advice mu4e-ask-maildir (:around (fn prompt) use-orderless)
-    (let ((completion-styles (append completion-styles '(orderless))))
-      (funcall fn prompt))))
-
-(use-package mu4e-alert
-  :ensure t
-  :after mu4e
-  :commands (mu4e-alert-enable-notifications)
-  :custom
-  (mu4e-alert-style 'libnotify)
-  (mu4e-alert-icon "emacs")
-  :config
-  (mu4e-alert-enable-notifications))
-
 (use-package elfeed
   :defer t
   :ensure t)
-
-
-;;; Games
-
-(use-package gnugo
-  :ensure t
-  :when (executable-find "gnugo")
-  :hook (gnugo-start-game . gnugo-gen-images)
-  :functions (gnugo-get gnugo-imgen-create-xpms gnugo-image-display-mode)
-  :defines (gnugo-imgen-sizing-function)
-  :preface
-  (defun gnugo-gen-images ()
-    (when-let ((size (and window-system (gnugo-get :SZ))))
-      (setq gnugo-xpms (gnugo-imgen-create-xpms size))
-      (gnugo-image-display-mode 1)))
-  :config
-  (setq gnugo-imgen-sizing-function (lambda (_) 32)))
 
 (provide 'init)
 ;;; init.el ends here
