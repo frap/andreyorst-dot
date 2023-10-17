@@ -78,7 +78,7 @@ If you experience stuttering, increase this.")
 
 ;; Configure Package Manager
 (unless (bound-and-true-p package--initialized)
-  (setq package-enable-at-startup nil) ; To prevent initializing twice
+  (setq package-enable-at-startup nil) ; To prevent initialising twice
   (package-initialize))
 
 ;; set use-package-verbose to t for interpreted .emacs,
@@ -104,7 +104,7 @@ If you experience stuttering, increase this.")
 (use-package use-package
   :custom
   (use-package-verbose t)
-  (use-package-always-ensure t)  ; :ensure t by default
+;;  (use-package-always-ensure t)  ; :ensure t by default
   (use-package-always-defer nil) ; :defer t by default
   (use-package-expand-minimally t)
   (use-package-enable-imenu-support t))
@@ -190,9 +190,6 @@ If you experience stuttering, increase this.")
 ;; Don't ask for confirmation to delete marked buffers
 (setq ibuffer-expert t)
 (setq ibuffer-default-sorting-mode 'recency)
-
-(use-package delight
-  :ensure t)
 
 (defun update-aws-envs (fn)
   (let ((str
@@ -379,6 +376,16 @@ If LOCAL-PORT is nil, PORT is used as local port."
   :bind (("<mode-line> <mouse-2>" . nil)
          ("<mode-line> <mouse-3>" . nil)))
 
+;; doom-modeline dropped all-the-icons support in favor of nerd-icons
+(use-package nerd-icons
+  :ensure t
+  ;; :custom
+  ;; The Nerd Font you want to use in GUI
+  ;; "Symbols Nerd Font Mono" is the default and is recommended
+  ;; but you can use any other Nerd Font if you want
+  ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
+  )
+
 (use-package mode-line
   :no-require
   :preface
@@ -449,6 +456,11 @@ applied to the name.")
   :no-require
   :hook (after-init . setup-fonts)
   :preface
+  (defun aorst/font-installed-p (font-name)
+  "Check if font with FONT-NAME is available."
+  (if (find-font (font-spec :name font-name))
+      t
+    nil))
   (defun font-installed-p (font-name)
     "Check if a font with FONT-NAME is available."
     (find-font (font-spec :name font-name)))
@@ -469,11 +481,67 @@ applied to the name.")
      (set-fontset-font t 'symbol "Symbola" nil 'append))
    (provide 'font))
 
-(use-package cus-edit
-  :custom
-  (custom-file (locate-user-emacs-file "custom.el"))
-  :init
-  (load custom-file :noerror))
+;;;; ligature
+(use-package ligature
+  :ensure t
+  :config
+  ;; Enable the "www" ligature in every possible major mode
+  (ligature-set-ligatures 't '("www"))
+  ;; Enable traditional ligature support in eww-mode, if the
+  ;; `variable-pitch' face supports it
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  ;; Enable all Cascadia Code ligatures in programming modes
+  (ligature-set-ligatures 'prog-mode '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+                                       ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+                                       "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+                                       "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+                                       "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+                                       "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+                                       "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+                                       "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+                                       ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+                                       "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+                                       "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+                                       "?=" "?." "??" ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+                                       "\\\\" "://"))
+  ;; Enables ligature checks globally in all buffers. You can also do it
+  ;; per mode with `ligature-mode'.
+  (global-ligature-mode t))
+
+;;;;; ligature-for-jetbrain
+(when (aorst/font-installed-p "JetBrainsMono")
+  (dolist (char/ligature-re
+           `((?-  ,(rx (or (or "-->" "-<<" "->>" "-|" "-~" "-<" "->") (+ "-"))))
+             (?/  ,(rx (or (or "/==" "/=" "/>" "/**" "/*") (+ "/"))))
+             (?*  ,(rx (or (or "*>" "*/") (+ "*"))))
+             (?<  ,(rx (or (or "<<=" "<<-" "<|||" "<==>" "<!--" "<=>" "<||" "<|>" "<-<"
+                               "<==" "<=<" "<-|" "<~>" "<=|" "<~~" "<$>" "<+>" "</>" "<*>"
+                               "<->" "<=" "<|" "<:" "<>"  "<$" "<-" "<~" "<+" "</" "<*")
+                           (+ "<"))))
+             (?:  ,(rx (or (or ":?>" "::=" ":>" ":<" ":?" ":=") (+ ":"))))
+             (?=  ,(rx (or (or "=>>" "==>" "=/=" "=!=" "=>" "=:=") (+ "="))))
+             (?!  ,(rx (or (or "!==" "!=") (+ "!"))))
+             (?>  ,(rx (or (or ">>-" ">>=" ">=>" ">]" ">:" ">-" ">=") (+ ">"))))
+             (?&  ,(rx (+ "&")))
+             (?|  ,(rx (or (or "|->" "|||>" "||>" "|=>" "||-" "||=" "|-" "|>" "|]" "|}" "|=")
+                           (+ "|"))))
+             (?.  ,(rx (or (or ".?" ".=" ".-" "..<") (+ "."))))
+             (?+  ,(rx (or "+>" (+ "+"))))
+             (?\[ ,(rx (or "[<" "[|")))
+             (?\{ ,(rx "{|"))
+             (?\? ,(rx (or (or "?." "?=" "?:") (+ "?"))))
+             (?#  ,(rx (or (or "#_(" "#[" "#{" "#=" "#!" "#:" "#_" "#?" "#(") (+ "#"))))
+             (?\; ,(rx (+ ";")))
+             (?_  ,(rx (or "_|_" "__")))
+             (?~  ,(rx (or "~~>" "~~" "~>" "~-" "~@")))
+             (?$  ,(rx "$>"))
+             (?^  ,(rx "^="))
+             (?\] ,(rx "]#"))))
+    (apply (lambda (char ligature-re)
+             (set-char-table-range composition-function-table char
+                                   `([,ligature-re 0 font-shape-gstring])))
+           char/ligature-re)))
+
 
 (use-package novice
   :preface
@@ -814,10 +882,14 @@ disabled, or enabled and the mark is active."
   :config
   (all-the-icons-completion-mode 1))
 
-(use-package uniquify
-  :defer t
-  :custom
-  (uniquify-buffer-name-style 'forward))
+;;;; uniquify-files
+(use-package uniquify-files
+  :ensure t
+  :config
+  (setq uniquify-buffer-name-style 'reverse)
+  (setq uniquify-separator " • ")
+  (setq uniquify-after-kill-buffer-p t)
+  (setq uniquify-ignore-buffers-re "^\\*"))
 
 (use-package display-line-numbers
   :hook (display-line-numbers-mode . toggle-hl-line)
@@ -856,6 +928,14 @@ disabled, or enabled and the mark is active."
 
 (use-package paren
   :hook (prog-mode . show-paren-mode))
+
+;;;;; rainbow
+(use-package rainbow-mode
+  :ensure t
+  :defer t
+  :hook ((prog-mode . rainbow-mode)
+         (web-mode . rainbow-mode)
+         (css-mode . rainbow-mode)))
 
 (use-package rainbow-delimiters
   :ensure t
@@ -927,18 +1007,69 @@ disabled, or enabled and the mark is active."
   (eshell-modules-list
    (cl-remove 'eshell-term eshell-modules-list)))
 
-(use-package dired
-  :bind ( :map dired-mode-map
-          ("<backspace>" . dired-up-directory)
-          ("M-<up>" . dired-up-directory)
-          ("~" . dired-home-directory))
-  :hook (dired-mode . dired-hide-details-mode)
-  :custom
-  (dired-listing-switches "-lAXhv --group-directories-first")
-  :config
-  (defun dired-home-directory ()
-    (interactive)
-    (dired (expand-file-name "~/"))))
+;;;; Dired
+(require 'dired)
+(setq dired-listing-switches "-agho --group-directories-first"
+      dired-omit-files "^\\.[^.].*"
+      dired-omit-verbose nil
+      dired-dwim-target t ; Copy and move files netween dired buffers
+      dired-recursive-copies 'always ; "always" means no asking
+      dired-recursive-deletes 'top   ; "top" means ask once for top level directory
+      dired-ls-F-marks-symlinks t ; -F marks links with @
+      dired-hide-details-hide-symlink-targets nil
+      auto-save-list-file-prefix nil ; not create directory .emacs.d/auto-save-list
+      ;; Auto refresh dired, but be quiet about it
+      global-auto-revert-non-file-buffers t
+      wdired-allow-to-change-permissions t
+      auto-revert-verbose nil
+      auto-revert-interval 1
+      delete-by-moving-to-trash t)
+
+(autoload 'dired-omit-mode "dired-x")
+
+(add-hook 'dired-mode-hook
+          (lambda ()
+            (interactive)
+            (dired-omit-mode 1)
+            (dired-hide-details-mode 1)
+            (hl-line-mode 1)))
+(define-key dired-mode-map "z" #'dired-omit-mode)
+(define-key dired-mode-map "l" #'dired-up-directory)
+(bind-keys :map dired-mode-map
+           ("/" . dired-goto-file)
+           ("," . dired-create-directory)
+           ("." . dired-create-empty-file)
+           ;; ("I" . dired-insert-subdir)
+           ("K" . dired-kill-subdir)
+           ;; ("O" . dired-find-file-other-window)
+           ("[" . dired-prev-dirline)
+           ("]" . dired-next-dirline)
+           ;; ("^" . mode-line-other-buffer)
+           ("x" . dired-do-delete)
+           ("X" . dired-do-flagged-delete)
+           ("y" . dired-do-copy))
+
+;; Define external image viewer/editor
+(setq image-dired-external-viewer "/usr/bin/sxiv") ;or /usr/bin/gimp
+;; (setq image-dired-marking-shows-next nil)
+(setq image-dired-thumb-size 256)
+;; Image-dired Keyboard shortcuts
+(with-eval-after-load 'dired
+  (define-key dired-mode-map (kbd "C-c x") 'image-dired)
+  (define-key dired-mode-map (kbd "M-<return>") 'image-dired-dired-display-external))
+
+;; (use-package dired
+;;   :bind ( :map dired-mode-map
+;;           ("<backspace>" . dired-up-directory)
+;;           ("M-<up>" . dired-up-directory)
+;;           ("~" . dired-home-directory))
+;;   :hook (dired-mode . dired-hide-details-mode)
+;;   :custom
+;;   (dired-listing-switches "-lAXhv --group-directories-first")
+;;   :config
+;;   (defun dired-home-directory ()
+;;     (interactive)
+;;     (dired (expand-file-name "~/"))))
 
 (use-package comint
   :defer t
@@ -1934,11 +2065,31 @@ specific project."
   :ensure t
   :defer t)
 
+;;;; avy
 (use-package avy
-  :ensure t
-  :bind
-  (("C-:" . avy-goto-char-timer)
-   ("C-M-:" . avy-goto-line)))
+  :bind(("C-'" . 'avy-goto-char)
+        ("C-:" . 'avy-goto-char-2)
+        ("M-g g" . 'avy-goto-line)
+        ("M-g e" . 'avy-goto-word-0)
+        ("M-g w" . 'avy-goto-word-1)
+        ;; ("M-" . 'avy-copy-line)
+        ;; ("M-" . 'avy-copy-region)
+        ("M-g l" . 'avy-move-line)
+        ("M-g M-r" . 'avy-move-region)
+        ("C-c C-j" . 'avy-resume))
+  :config
+  (setq avy-ignored-modes '(image-mode doc-view-mode pdf-view-mode exwm-mode))
+  :custom
+  (avy-timeout-seconds 0.5)
+  (avy-style 'pre))
+;; :custom-face
+;; (avy-lead-face ((t (:background "#51afef" :foreground "#870000" :weight bold)))))
+
+;; (use-package avy
+;;   :ensure t
+;;   :bind
+;;   (("C-:" . avy-goto-char-timer)
+;;    ("C-M-:" . avy-goto-line)))
 
 (use-package isayt
   :vc (:url "https://gitlab.com/andreyorst/isayt.el.git")
@@ -2162,6 +2313,52 @@ means save all with no questions."
   :config
   (add-to-list 'project-switch-commands
                '(magit-project-status "Magit") t))
+
+;;;;; gutter
+(use-package git-gutter
+  :ensure t
+  :delight
+  :when window-system
+  :defer t
+  :bind (("C-x P" . git-gutter:popup-hunk)
+         ("M-P" . git-gutter:previous-hunk)
+         ("M-N" . git-gutter:next-hunk)
+         ("C-c G" . git-gutter:popup-hunk))
+  :hook ((prog-mode org-mode) . git-gutter-mode )
+  :config
+  (setq git-gutter:update-interval 2)
+  ;; (setq git-gutter:modified-sign "†") ; ✘
+  ;; (setq git-gutter:added-sign "†")
+  ;; (setq git-gutter:deleted-sign "†")
+  ;; (set-face-foreground 'git-gutter:added "Green")
+  ;; (set-face-foreground 'git-gutter:modified "Gold")
+  ;; (set-face-foreground 'git-gutter:deleted "Red")
+  )
+;;;;; gutter-fringe
+(use-package git-gutter-fringe
+  :ensure t
+  :delight
+  :after git-gutter
+  :when window-system
+  :defer t
+  :init
+  (require 'git-gutter-fringe)
+  (when (fboundp 'define-fringe-bitmap)
+    (define-fringe-bitmap 'git-gutter-fr:added
+      [224 224 224 224 224 224 224 224 224 224 224 224 224
+           224 224 224 224 224 224 224 224 224 224 224 224]
+      nil nil 'center)
+    (define-fringe-bitmap 'git-gutter-fr:modified
+      [224 224 224 224 224 224 224 224 224 224 224 224 224
+           224 224 224 224 224 224 224 224 224 224 224 224]
+      nil nil 'center)
+    (define-fringe-bitmap 'git-gutter-fr:deleted
+      [0 0 0 0 0 0 0 0 0 0 0 0 0 128 192 224 240 248]
+      nil nil 'center)))
+
+;;;;; git-time
+(use-package git-timemachine
+  :ensure t)
 
 (use-package server
   :commands (server-running-p)
@@ -2456,5 +2653,231 @@ dependency artifact based on the project's dependencies."
   :defer t
   :ensure t)
 
+
+;;;; Encoding
+;; default to utf-8 for all the things
+(set-charset-priority 'unicode)
+(setq locale-coding-system 'utf-8
+      coding-system-for-read 'utf-8
+      coding-system-for-write 'utf-8)
+(prefer-coding-system 'utf-8)
+(set-language-environment 'utf-8)
+(setq locale-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-selection-coding-system 'utf-8)
+(set-clipboard-coding-system 'utf-8)
+(set-locale-environment "en_US.UTF-8")
+(set-buffer-file-coding-system 'utf-8-unix)
+(setq default-process-coding-system '(utf-8-unix . utf-8-unix))
+
+;;________________________________________________________________
+;;;    Settings
+;;________________________________________________________________
+;; By default emacs will not delete selection text when typing on it, let's fix it
+(delete-selection-mode t)
+;; find-file-at-point, smarter C-x C-f when point on path or URL
+(ffap-bindings)
+;; Ask y or n instead of yes or no
+(defalias 'yes-or-no-p 'y-or-n-p)
+;; show zero-width characters
+(set-face-background 'glyphless-char "red")
+(electric-indent-mode nil)  ; Auto indentation.
+(global-subword-mode 1)     ; Iterate through CamelCase words.
+(global-auto-revert-mode 1) ; Automatically revert buffer when it changes on disk.
+(mouse-avoidance-mode 'exile)
+;; Font lock of special Dash variables (it, acc, etc.). Comes default with Emacs.
+(global-dash-fontify-mode)
+(when window-system (global-prettify-symbols-mode t))
+
+;;;; Modeline
+(size-indication-mode)
+(setq display-time-24hr-format t
+      ;; display-time-format "%l:%M%p" ;  %b %y"
+      display-time-default-load-average nil)
+(display-time-mode)
+
+;;;; General But Better Defaults
+(setq-default
+ ad-redefinition-action 'accept     ; Silence warnings for redefinition.
+ confirm-kill-emacs 'yes-or-no-p    ; Confirm before exiting Emacs.
+ cursor-in-non-selected-windows nil ; Hide the cursor in inactive windows.
+ speedbar t                         ; Quick file access with bar.
+ backup-by-copying t                ; don't clobber symlinks.
+ ;; backup-directory-alist `(("."~/.config/emacs/var/backup/per-session))
+ default-directory "~/"
+ custom-safe-themes t
+ load-prefer-newer t ; don't use the compiled code if its the older package.
+ make-backup-files t               ; backup of a file the first time it is saved.
+ delete-by-moving-to-trash t       ; move deleted files to trash.
+ delete-old-versions t             ; delete excess backup files silently.
+ kept-new-versions 6               ; newest versions to keep when a new numbered backup is made (default: 2).
+ kept-old-versions 2               ; oldest versions to keep when a new numbered backup is made (default: 2).
+ version-control t                 ; version numbers for backup files.
+ auto-save-default t               ; auto-save every buffer that visits a file.
+ auto-save-timeout 30              ; number of seconds idle time before auto-save (default: 30).
+ auto-save-interval 200            ; number of keystrokes between auto-saves (default: 300).
+ compilation-always-kill t         ; kill compilation process before starting another.
+ compilation-ask-about-save nil    ; save all buffers on `compile'.
+ compilation-scroll-output t
+ tab-width 4
+ indent-tabs-mode nil              ; set indentation with spaces instead of tabs with 4 spaces.
+ indent-line-function 'insert-tab
+ require-final-newline t
+ x-select-enable-clipboard t       ; Makes killing/yanking interact with the clipboard.
+ save-interprogram-paste-before-kill t ; Save clipboard strings into kill ring before replacing them.
+ apropos-do-all t                  ; Shows all options when running apropos.
+ mouse-yank-at-point t             ; Mouse yank commands yank at point instead of at click.
+ message-log-max 1000
+ fill-column 80
+ make-pointer-invisible t          ; hide cursor when writing.
+ column-number-mode t              ; show (line,column) in mode-line.
+ cua-selection-mode t              ; delete regions.
+ enable-recursive-minibuffers t    ; allow commands to be run on minibuffers.
+ dired-kill-when-opening-new-dired-buffer t   ; delete dired buffer when opening another directory
+ backward-delete-char-untabify-method 'hungry ; Alternatives is: 'all (remove all consecutive whitespace characters, even newlines).
+ )
+
+(setq
+ debug-on-error init-file-debug     ; Reduce debug output, well, unless we've asked for it.
+ jka-compr-verbose init-file-debug
+ read-process-output-max (* 64 1024); 64kb
+ ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
+ idle-update-delay 1.0              ; default is 0.5.
+ scroll-step 1                      ; scroll with less jump.
+ scroll-preserve-screen-position t
+ scroll-margin 3
+ scroll-conservatively 101
+ scroll-up-aggressively 0.01
+ scroll-down-aggressively 0.01
+ lazy-lock-defer-on-scrolling t     ; set this to make scolloing faster.
+ auto-window-vscroll nil            ; Lighten vertical scroll.
+ fast-but-imprecise-scrolling nil
+ mouse-wheel-scroll-amount '(1 ((shift) . 1))
+ mouse-wheel-progressive-speed nil
+ hscroll-step 1                     ; Horizontal Scroll.
+ hscroll-margin 1
+ help-window-select t               ; select help window when opened
+ redisplay-skip-fontification-on-input t
+ tab-always-indent 'complete        ; smart tab behavior - indent or complete.
+ visible-bell t                     ; Flash the screen on error, don't beep.
+ view-read-only t					; Toggle ON or OFF with M-x view-mode (or use e to exit view-mode).
+ use-dialog-box nil                 ; Don't pop up UI dialogs when prompting.
+ echo-keystrokes 0.1                ; Show Keystrokes in Progress Instantly.
+ delete-auto-save-files t           ; deletes buffer's auto save file when it is saved or killed with no changes in it.
+ kill-whole-line t 			        ; kills the entire line plus the newline
+ save-place-forget-unreadable-files nil
+ blink-matching-paren t             ; Blinking parenthesis.
+ next-line-add-newlines nil         ; don't automatically add new line, when scroll down at the bottom of a buffer.
+ require-final-newline t            ; require final new line.
+ mouse-sel-retain-highlight t       ; keep mouse high-lighted.
+ highlight-nonselected-windows nil
+ transient-mark-mode t              ; highlight the stuff you are marking.
+ ffap-machine-p-known 'reject       ; Don't ping things that look like domain names.
+ pgtk-wait-for-event-timeout 0.001
+ display-line-numbers-type 'relative
+ speedbar-show-unknown-files t ; browse source tree with Speedbar file browser
+ frame-title-format '(buffer-file-name "Emacs: %b (%f)" "Emacs: %b") ; name of the file I am editing as the name of the window.
+ )
+
+;;________________________________________________________________
+;;;;    Fonts
+;;________________________________________________________________
+(global-font-lock-mode 1)             ; Use font-lock everywhere.
+(setq font-lock-maximum-decoration t) ; We have CPU to spare; highlight all syntax categories.
+
+;; Set the font face
+(cond ((aorst/font-installed-p "JetBrainsMono")
+       (set-face-attribute 'default nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))
+       (set-face-attribute 'fixed-pitch nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular)))
+      ((aorst/font-installed-p "Source Code Pro")
+       (set-face-attribute 'default nil :font "Source Code Pro 10")))
+
+;; For variable pitched fonts Iosevka Aile is used if available.
+(when (aorst/font-installed-p "Iosevka Aile")
+  (set-face-attribute 'variable-pitch nil :font (font-spec :family "Iosevka Aile" :size 10.5 :weight 'regular))
+  (set-face-attribute 'font-lock-comment-face nil :family "Iosevka Aile Oblique" :height 106) ; :foreground "#5B6268"
+  (set-face-attribute 'font-lock-function-name-face nil :family "Iosevka Aile" :height 102 :slant 'italic :weight 'regular) ; 'medium
+  ;; (set-face-attribute 'font-lock-variable-name-face nil :foreground "#dcaeea" :weight 'bold)
+  (set-face-attribute 'font-lock-keyword-face nil :weight 'bold)
+  )
+
+;; Set up emoji rendering
+;; Default Windows emoji font
+(when (member "Segoe UI Emoji" (font-family-list))
+  (set-fontset-font t 'symbol (font-spec :family "Segoe UI Emoji") nil 'prepend)
+  (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Segoe UI Emoji"))
+
+;; Linux emoji font
+(when (member "Noto Color Emoji" (font-family-list))
+  (set-fontset-font t 'symbol (font-spec :family "Noto Color Emoji") nil 'prepend)
+  (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Noto Color Emoji"))
+
+;;________________________________________________________________
+;;;;    Custom settings
+;;________________________________________________________________
+;; Separate Customization from init file
+(setq-default custom-file (expand-file-name "etc/custom.el" user-emacs-directory))
+(unless (file-exists-p custom-file)
+  (with-temp-buffer
+    (write-file custom-file)))
+
+(when (file-exists-p custom-file)
+  (load custom-file 'noerror 'nomessage))
+
+;; Garbage collection on focus-out, Emacs should feel snappier
+(add-function :after after-focus-change-function (lambda () (unless (frame-focus-state) (save-some-buffers t))))
+
+;;; Load Path
+;; Since all the configuration files are stored in a folder, they need to be added to `load-path' now.
+(defun update-to-load-path (folder)
+  "Update FOLDER and its subdirectories to `load-path'."
+  (let ((base folder))
+    (unless (member base load-path)
+      (add-to-list 'load-path base))
+    (dolist (f (directory-files base))
+      (let ((name (concat base "/" f)))
+        (when (and (file-directory-p name)
+                   (not (equal f ".."))
+                   (not (equal f ".")))
+          (unless (member base load-path)
+            (add-to-list 'load-path name)))))))
+
+(update-to-load-path (expand-file-name "elpa" user-emacs-directory))
+
+;;;; Load custom-files
+(defun load-directory (dir)
+  "Load all *.el files in a directory."
+  (let ((load-it (lambda (f)
+                   (load-file (concat (file-name-as-directory dir) f)))))
+    (mapc load-it (directory-files dir nil "\\.el$"))))
+
+(load-directory "~/.config/emacs/my-lisp") ; load my configuration of packages
+
+;;;; remove old backup files
+;; Automatically purge backup files not accessed in a week:
+(message "Deleting old backup files...")
+(let ((week (* 60 60 24 7))
+      (current (float-time (current-time))))
+  (dolist (file (directory-files temporary-file-directory t))
+    (when (and (backup-file-name-p file)
+               (> (- current (float-time (fifth (file-attributes file))))
+                  week))
+      (message "%s" file)
+      (delete-file file))))
+
+;;; Finish up
 (provide 'init)
 ;;; init.el ends here
+;; Local Variables:
+;; byte-compile-warnings: (not free-vars)
+;; End:
+
+;;; enable some major-mode
+(put 'scroll-left 'disabled nil)
+(put 'downcase-region 'disabled nil)
+(put 'narrow-to-region 'disabled nil)
+(put 'narrow-to-defun  'disabled nil)
+(put 'narrow-to-page   'disabled nil)
+(put 'dired-find-alternate-file 'disabled nil)

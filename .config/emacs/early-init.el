@@ -111,7 +111,7 @@
     (defun restore-file-handler-alist ()
       (setq file-name-handler-alist
             (delete-dups (append file-name-handler-alist
-                                 restore-file-name-handler-alist)))))
+                                 restore-file-name-handler-alist))))))
 
 
 (defun edit-init-file ()
