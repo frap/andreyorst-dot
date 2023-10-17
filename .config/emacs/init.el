@@ -16,23 +16,180 @@
 
 (add-hook 'emacs-startup-hook #'gas/display-startup-time)
 ;;; Code:
+
+;; BetterGC
+(defvar better-gc-cons-threshold 134217728 ; 128mb
+  "If you experience freezing, decrease this.
+If you experience stuttering, increase this.")
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold better-gc-cons-threshold)
+            (setq file-name-handler-alist file-name-handler-alist-original)
+            (makunbound 'file-name-handler-alist-original)))
+;; -BetterGC
+
+;; AutoGC
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (if (boundp 'after-focus-change-function)
+                (add-function :after after-focus-change-function
+                              (lambda ()
+                                (unless (frame-focus-state)
+                                  (garbage-collect))))
+              (add-hook 'after-focus-change-function 'garbage-collect))
+            (defun gc-minibuffer-setup-hook ()
+              (setq gc-cons-threshold (* better-gc-cons-threshold 2)))
+
+            (defun gc-minibuffer-exit-hook ()
+              (garbage-collect)
+              (setq gc-cons-threshold better-gc-cons-threshold))
+
+            (add-hook 'minibuffer-setup-hook #'gc-minibuffer-setup-hook)
+            (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)))
+;; -AutoGC
+
+;; emacsclient --no-wait--alternate-editor=emacs [FILE]
+(require 'server)
+(unless (server-running-p)
+  (server-start))
+
+;;; Generic packages
+(require 'package)
+;; Select the folder to store packages
+;; Comment / Uncomment to use desired sites
+(setq package-user-dir (expand-file-name "elpa" user-emacs-directory)
+      package-archives
+      '(("gnu"   . "https://elpa.gnu.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+        ("melpa-stable" . "https://stable.melpa.org/packages/")
+        ("melpa" . "https://melpa.org/packages/")
+        ("org" . "https://orgmode.org/elpa/"))
+      package-quickstart nil)
+;; ("cselpa" . "https://elpa.thecybershadow.net/packages/")
+;; ("melpa-cn" . "http://mirrors.cloud.tencent.com/elpa/melpa/")
+;; ("gnu-cn"   . "http://mirrors.cloud.tencent.com/elpa/gnu/"))
+
+(setq package-archive-priorities
+      '(("melpa" .  4)
+        ("melpa-stable" . 3)
+        ("org" . 2)
+        ("gnu" . 1)))
+
+;; Configure Package Manager
+(unless (bound-and-true-p package--initialized)
+  (setq package-enable-at-startup nil) ; To prevent initializing twice
+  (package-initialize))
+
+;; set use-package-verbose to t for interpreted .emacs,
+;; and to nil for byte-compiled .emacs.elc.
+(eval-and-compile
+  (setq use-package-verbose (not (bound-and-true-p byte-compile-current-file))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+
+;;; use-package
+;; Install use-package if not installed
+(eval-and-compile
+  (unless (and (fboundp 'package-installed-p)
+               (package-installed-p 'use-package))
+    (package-refresh-contents) ; update archives
+    (package-install 'use-package)) ; grab the newest use-package
+  (if init-file-debug
+      (setq use-package-compute-statistics t)
+    (setq use-package-compute-statistics nil))
+  (require 'use-package))
+
+;; Configure use-package
+(use-package use-package
+  :custom
+  (use-package-verbose t)
+  (use-package-always-ensure t)  ; :ensure t by default
+  (use-package-always-defer nil) ; :defer t by default
+  (use-package-expand-minimally t)
+  (use-package-enable-imenu-support t))
+
+;; ─────────────────── Additional Packages and Configurations ──────────────────
+;; Add `:doc' support for use-package so that we can use it like what a doc-strings is for
+(eval-and-compile
+  (add-to-list 'use-package-keywords :doc t)
+  (defun use-package-handler/:doc (name-symbol _keyword _docstring rest state)
+    "An identity handler for :doc.
+     Currently, the value for this keyword is being ignored.
+     This is done just to pass the compilation when :doc is
+     included Argument NAME-SYMBOL is the first argument to
+     `use-package' in a declaration.  Argument KEYWORD here is
+     simply :doc.  Argument DOCSTRING is the value supplied for
+     :doc keyword.  Argument REST is the list of rest of the
+     keywords.  Argument STATE is maintained by `use-package' as
+     it processes symbols."
+
+    ;; just process the next keywords
+    (use-package-process-keywords name-symbol rest state)))
+
 ;; User Identify (optional)
 ;; e.g. GPG configuration, email clients, file templates and snippets
 (setq
  user-full-name "Andrés Gasson"
- user-mail-address "gas@troveplatform.co.nz"
+ user-mail-address "gas@tuatara.red"
  github-account-name "frap")
 
-(use-package use-package
-  :no-require
-  :custom
-  (use-package-enable-imenu-support t))
+(use-package delight
+  :doc "A feature that removes certain minor-modes from mode-line.
+"
+  :delight)
+(delight '((abbrev-mode " Abv" abbrev)
+           (auto-fill-function " AF")
+           (visual-line-mode)
+           (smart-tab-mode " \\t" smart-tab)
+           (eldoc-mode nil "eldoc")
+           (rainbow-mode)
+           (overwrite-mode " Ov" t)
+           (emacs-lisp-mode "εlisp" :major)))
 
-(use-package early-init
-  :no-require
-  :unless (featurep 'early-init)
+;; github.com/doomemacs/doomemacs/blob/develop/core/core.el#L296
+(use-package gcmh
+  :init (gcmh-mode 1)
   :config
-  (load-file (locate-user-emacs-file "early-init.el")))
+  (setq
+   gcmh-idle-delay 'auto ; default is 15s
+   gcmh-auto-idle-delay-factor 10
+   gcmh-high-cons-threshold (* 16 1024 1024)) ; 16mb
+  :delight " Ⓖ")
+
+;;;; ibuffer
+(use-package ibuffer
+  :bind (("C-x C-b" . ibuffer)
+         :map ibuffer-mode-map
+         ("M-n" . nil)
+         ("M-o" . nil)
+         ("M-p" . nil))
+  :delight)
+
+(setq ibuffer-saved-filter-groups
+      (quote (("default"
+               ("dired" (mode . dired-mode))
+               ("org" (name . "^.*org$"))
+               ("web" (or (mode . web-mode) (mode . js2-mode)))
+               ("shell" (or (mode . eshell-mode) (mode . shell-mode)))
+               ("mu4e" (name . "\*mu4e\*"))
+               ("coding" (or
+                               (mode . python-mode)
+                               (mode . clojure-mode)))
+               ("emacs" (or
+                         (name . "^\\*scratch\\*$")
+                         (name . "^\\*Messages\\*$")))
+               ))))
+(add-hook 'ibuffer-mode-hook
+          (lambda ()
+            (ibuffer-auto-mode 1)
+            (ibuffer-switch-to-saved-filter-groups "default")))
+
+;; Don't show filter groups if there are no buffers in that group
+(setq ibuffer-show-empty-filter-groups nil)
+;; Don't ask for confirmation to delete marked buffers
+(setq ibuffer-expert t)
+(setq ibuffer-default-sorting-mode 'recency)
 
 (use-package delight
   :ensure t)
@@ -877,9 +1034,19 @@ Search is based on regular expressions in the
     "Move point to the location of the mouse pointer."
     (mouse-set-point last-input-event)))
 
-(use-package help
+;;;; helpful
+(use-package helpful
+  :doc "Helpful improves the built-in Emacs help system by providing more contextual information."
+  :commands (helpful-callable helpful-variable helpful-command helpful-symbol helpful-key)
   :custom
-  (help-window-select t))
+  (counsel-describe-function-function #'helpful-callable)
+  (counsel-describe-variable-function #'helpful-variable)
+  :bind
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-command]  . helpful-command)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-function] . helpful-callable))
 
 (use-package  which-key
   :hook (after-init . which-key-mode)
@@ -2033,11 +2200,6 @@ means save all with no questions."
   (dolist (dir (list (locate-user-emacs-file ".cache/")
                      (locate-user-emacs-file "workspace/.cache/")))
     (add-to-list 'recentf-exclude (concat (regexp-quote dir) ".*"))))
-
-(use-package gcmh
-  :ensure t
-  :hook (after-init . gcmh-mode)
-  :delight gcmh-mode)
 
 (use-package hl-todo
   :ensure t
