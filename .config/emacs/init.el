@@ -1525,10 +1525,10 @@ Search is based on regular expressions in the
   :hook ((emacs-lisp-mode . eldoc-mode)
          (emacs-lisp-mode . common-lisp-modes-mode)))
 
-(use-package pprint-to-buffer
-  :vc (:url "https://github.com/plexus/plexmacs.git"
-       :rev :newest
-       :lisp-dir "pprint-to-buffer/"))
+;; (use-package pprint-to-buffer
+;;   :vc (:url "https://github.com/plexus/plexmacs.git"
+;;        :rev :newest
+;;        :lisp-dir "pprint-to-buffer/"))
 
 (use-package racket-mode
   :ensure t
@@ -1758,6 +1758,7 @@ See `cider-find-and-clear-repl-output' for more info."
   (clj-ns-name-install))
 
 (use-package walkclj
+  :ensure t
   :vc (:url "https://github.com/corgi-emacs/walkclj.git"))
 
 ;; Most annoying JVM "feature" of all time
@@ -1933,6 +1934,7 @@ specific project."
   (setq lsp-use-plists t))
 
 (use-package lsp-ui
+  :ensure t
   :demand t
   :commands lsp-ui-mode)
 
