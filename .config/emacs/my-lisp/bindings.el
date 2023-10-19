@@ -102,18 +102,6 @@ With a prefix argument ARG, insert the next ARG characters literally."
 
 (global-set-key (kbd "C-x M-w") 'copy-buffer-and-stay)
 
-
-(defun split-and-follow-horizontally ()
-  "Split window below."
-  (interactive)
-  (split-window-below)
-  (other-window 1))
-  (defun split-and-follow-vertically ()
-    "Split window right."
-    (interactive)
-    (split-window-right)
-    (other-window 1))
-
 ;;----------------------------------------------------------------------
 ;;; keybindings
 ;;;; unbind-key
