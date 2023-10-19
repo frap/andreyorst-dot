@@ -779,7 +779,30 @@ disabled, or enabled and the mark is active."
 (use-package startup
   :no-require
   :custom
-  (inhibit-splash-screen t))
+  (inhibit-splash-screen t)
+  :config
+  (setq initial-major-mode #'emacs-lisp-mode)
+  (setq initial-scratch-message
+        ";; ABANDONNEZ TOUT ESPOIR VOUS QUI ENTREZ ICI\n\n" )
+  (defun +scratch-immortal ()
+    "Bury, don't kill \"*scratch*\" buffer.
+          For `kill-buffer-query-functions'."
+    (if (eq (current-buffer) (get-buffer "*scratch*"))
+        (progn (bury-buffer)
+               nil)
+      t))
+  (defun +scratch-buffer-setup ()
+    "Add comment to `scratch' buffer and name it accordingly."
+    (let* ((mode (format "%s" major-mode))
+           (string (concat "Scratch buffer for:" mode "\n\n")))
+      (when scratch-buffer
+        (save-excursion
+          (insert string)
+          (goto-char (point-min))
+          (comment-region (point-at-bol) (point-at-eol)))
+        (next-line 2))
+      (rename-buffer (concat "*scratch<" mode ">*") t)))
+  (add-hook 'kill-buffer-query-functions #'+scratch-immortal))
 
 (use-package menu-bar
   :unless (display-graphic-p)
