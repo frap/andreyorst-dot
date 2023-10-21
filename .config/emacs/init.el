@@ -1709,7 +1709,7 @@ Search is based on regular expressions in the
   (cider-show-eval-spinner t)
   (nrepl-use-ssh-fallback-for-remote-hosts t)
   (cider-enrich-classpath t)
-  (cider-repl-history-file (expand-file-name "~/.cider-history"))
+  (cider-repl-history-file (expand-file-name "~/.config/cider-history"))
   (cider-clojure-cli-global-options "-J-XX:-OmitStackTraceInFastThrow")
   (cider-use-tooltips nil)
   (cider-connection-message-fn #'cider-random-tip)
@@ -1982,7 +1982,14 @@ specific project."
   :hook (cider-mode . cider-toggle-lsp-completion-maybe)
   :preface
   (defun cider-toggle-lsp-completion-maybe ()
-    (lsp-completion-mode (if (bound-and-true-p cider-mode) -1 1))))
+    (lsp-completion-mode (if (bound-and-true-p cider-mode) -1 1)))
+  :config
+  (setq lsp-file-watch-threshold 10000
+        lsp-signature-auto-activate nil
+        ;; I use clj-kondo from master
+        lsp-diagnostics-provider :none
+        lsp-enable-indentation nil ;; uncomment to use cider indentation instead of lsp
+        ))
 
 (use-package lsp-clojure
   :no-require
@@ -2146,12 +2153,28 @@ specific project."
      ("C-&" . mc/vertical-align-with-space)
      ("C-#" . mc/insert-numbers))))
 
+;; ;;;; undo-tree
+;; ;; Allow tree-semantics for undo operations.
+;; (use-package undo-tree
+;;   :ensure t
+;;   :delight
+;;   :bind ("C-x u" . undo-tree-visualize)
+;;   :hook (org-mode . undo-tree-mode) ;; For some reason, I need this. FIXME.
+;;   :init (global-undo-tree-mode)
+;;   :custom
+;;   ;; Show a diff window displaying changes between undo nodes.
+;;   (undo-tree-visualizer-diff t)
+;;   ;; Prevent undo tree files from polluting your git repo
+;;   (undo-tree-history-directory-alist '(("." . "~/.config/emacs/var/undo-tree-hist")))
+;;   ;; Each node in the undo tree should have a timestamp.
+;;   (undo-tree-visualizer-timestamps t))
+
 (use-package vundo
   :ensure t
   :bind (("C-c u" . vundo))
   :custom
   (vundo-roll-back-on-quit nil)
-  (vundo--window-max-height 10))
+  (vundo--window-max-height 20))
 
 (use-package terraform-mode
   :ensure t)
@@ -2201,7 +2224,7 @@ specific project."
   (project-vc-extra-root-markers
    '("Cargo.toml" "compile_commands.json"
      "compile_flags.txt" "project.clj"
-     "deps.edn" "shadow-cljs.edn"))
+     "deps.edn" "shadow-cljs.edn" "bb.edn"))
   :preface
   (defcustom project-compilation-mode nil
     "Mode to run the `compile' command with."
@@ -2352,8 +2375,8 @@ means save all with no questions."
   :hook ((prog-mode org-mode) . git-gutter-mode )
   :config
   (setq git-gutter:update-interval 2)
-  ;; (setq git-gutter:modified-sign "†") ; ✘
-  ;; (setq git-gutter:added-sign "†")
+  (setq git-gutter:modified-sign "†") ; ✘
+ ;; (setq git-gutter:added-sign "†")
   ;; (setq git-gutter:deleted-sign "†")
   ;; (set-face-foreground 'git-gutter:added "Green")
   ;; (set-face-foreground 'git-gutter:modified "Gold")

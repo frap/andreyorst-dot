@@ -122,6 +122,7 @@
                                   company-dabbrev-code))))
 
 (use-package company-shell
+  :ensure t
   :config
   (require 'company)
   (add-hook 'shell-mode-hook 'shell-mode-company-init))
