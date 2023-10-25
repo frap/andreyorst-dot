@@ -444,38 +444,30 @@ point reaches the beginning or end of the buffer, stop there."
 ;; (global-set-key (kbd "C-<f8>") 'flyspell-goto-next-and-popup)
 ;; (define-key flyspell-mode-map (kbd "C-<f8>") 'flyspell-goto-next-and-popup)
 
-(defvar @-dotenv-file-name ".env"
-  "The name of the .env file."
-  )
+;; (defvar @-dotenv-file-name ".env"
+;;   "The name of the .env file."
+;;   )
 
-(defun @-find-env-file ()
-  "Find the closest .env file in the directory hierarchy."
+;; (defun @-find-env-file ()
+;;   "Find the closest .env file in the directory hierarchy."
 
-  (let* ((env-file-directory (locate-dominating-file "." @-dotenv-file-name))
-        (file-name (concat env-file-directory @-dotenv-file-name)))
-    (when (file-exists-p file-name)
-        file-name))
-  )
+;;   (let* ((env-file-directory (locate-dominating-file "." @-dotenv-file-name))
+;;         (file-name (concat env-file-directory @-dotenv-file-name)))
+;;     (when (file-exists-p file-name)
+;;         file-name))
+;;   )
 
-(use-package load-env-vars
-  :ensure t
-  :hook ((lsp-mode . #'@-set-project-env)
-  (project-mode . #'@-set-project-env)
-  (cider-mode . #'@-set-project-env))
-  )
+;; (use-package load-env-vars
+;;   :ensure t
+;;   ;;  :hook ((lsp-mode . #'@-set-project-env)
+;;   ;; (project-mode . #'@-set-project-env)
+;;   ;; (cider-mode . #'@-set-project-env))
+;;   )
 
-(defun @-set-project-env ()
-  "Export all environment variables in the closest .env file."
+;; (defun @-set-project-env ()
+;;   "Export all environment variables in the closest .env file."
 
-  (let ((env-file (@-find-env-file)))
-    (when env-file
-      (load-env-vars env-file)))
-  )
-
-;;; Finish up
-(provide 'extra)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; extra.el ends here
-;; Local Variables:
-;; byte-compile-warnings: (not free-vars)
-;; End:
+;;   (let ((env-file (@-find-env-file)))
+;;     (when env-file
+;;       (load-env-vars env-file)))
+;;   )

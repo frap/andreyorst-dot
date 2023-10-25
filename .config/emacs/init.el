@@ -134,6 +134,30 @@ If you experience stuttering, increase this.")
  user-mail-address "gas@tuatara.red"
  github-account-name "frap")
 
+;;;; no-littering
+(use-package no-littering               ; Keep .emacs.d clean
+  :doc "It’s good to have centralized working datasets storage, to prevent pollution of Emacs config directory."
+  :custom
+  (no-littering-var-directory (expand-file-name "data/" user-emacs-directory))
+  (no-littering-etc-directory (expand-file-name "config/" user-emacs-directory))
+  :config
+  (require 'recentf)
+  (add-to-list 'recentf-exclude no-littering-var-directory)
+  (add-to-list 'recentf-exclude no-littering-etc-directory)
+  ;; Move this in its own thing
+  (setq
+   create-lockfiles nil
+   delete-old-versions t
+   kept-new-versions 6
+   kept-old-versions 2
+   version-control t)
+
+  (setq
+   backup-directory-alist
+   `((".*" . ,(no-littering-expand-var-file-name "backup/")))
+   auto-save-file-name-transforms
+   `((".*" ,(no-littering-expand-var-file-name "auto-save/") t))))
+
 (use-package delight
   :doc "A feature that removes certain minor-modes from mode-line.
 "
@@ -543,15 +567,6 @@ applied to the name.")
            char/ligature-re)))
 
 
-(use-package novice
-  :preface
-  (defvar disabled-commands (locate-user-emacs-file "disabled.el")
-    "File to store disabled commands, that were enabled permanently.")
-  :config
-  (define-advice enable-command (:around (fn command) use-disabled-file)
-    (let ((user-init-file disabled-commands))
-      (funcall fn command)))
-  (load disabled-commands 'noerror))
 
 (use-package files
   :preface
@@ -1141,52 +1156,91 @@ disabled, or enabled and the mark is active."
       (profiler-report)
       (profiler-cpu-stop))))
 
-(use-package hideshow
-  :hook (prog-mode . hs-minor-mode)
-  :delight hs-minor-mode
-  :commands (hs-hide-block)
-  :bind ( :map hs-minor-mode-map
-          ("C-c @ C-p" . hs-hide-all-private))
-  :preface
-  (defvar hs-mode-private-regex-alist
-    `(((emacs-lisp-mode lisp-mode)
-       . ,(rx bol "(def" (+ (not space)) (+ space) (+ (not space)) "--"))
-      ((clojure-mode clojurescrip-mode clojurec-mode)
-       . ,(rx "(" (or "defn-"
-                      (seq "def" (* (not space)) (+ space)
-                           "^" (or ":private"
-                                   (seq "{" (* (not "}")) ":private" (+ space) "true")))
-                      "comment")))
-      (zig-mode
-       . ,(rx bol (* space) "fn" (+ (not "{")) "{"))
-      (fennel-mode
-       . ,(rx bol "(" (or (seq (or "fn" "local" "var") (+ space) "-" alpha)
-                          "comment"))))
-    "Alist of major modes to regular expressions for finding private definitions")
-  (defun hs-hide-all-private ()
-    "Hide all private definitions in the current buffer.
-Search is based on regular expressions in the
-`hs-private-regex-mode-alist' variable."
-    (interactive)
-    (when hs-minor-mode
-      (if-let ((re (alist-get major-mode hs-mode-private-regex-alist nil nil
-                              (lambda (key1 key2)
-                                (if (listp key1)
-                                    (and (memq key2 key1) t)
-                                  (eq key1 key2))))))
-          (save-excursion
-            (goto-char (point-max))
-            (while (re-search-backward re nil t)
-              (hs-hide-block)))
-        (error "Mode %s doesn't define a regex to find private definitions" major-mode))))
-  :config
-  (easy-menu-add-item hs-minor-mode-map '(menu-bar hide/show)
-                      ["Hide all private definitions" hs-hide-all-private
-                       :help "Hide all private definitions based on `hs-mode-private-regex-alist'."]
-                      "--")
-  (define-advice hs-toggle-hiding (:before (&rest _) move-point-to-mouse)
-    "Move point to the location of the mouse pointer."
-    (mouse-set-point last-input-event)))
+;; (use-package hideshow
+;;   :hook (prog-mode . hs-minor-mode)
+;;   :delight hs-minor-mode
+;;   :commands (hs-hide-block)
+;;   :bind ( :map hs-minor-mode-map
+;;           ("C-c @ C-p" . hs-hide-all-private))
+;;   :preface
+;;   (defvar hs-mode-private-regex-alist
+;;     `(((emacs-lisp-mode lisp-mode)
+;;        . ,(rx bol "(def" (+ (not space)) (+ space) (+ (not space)) "--"))
+;;       ((clojure-mode clojurescrip-mode clojurec-mode)
+;;        . ,(rx "(" (or "defn-"
+;;                       (seq "def" (* (not space)) (+ space)
+;;                            "^" (or ":private"
+;;                                    (seq "{" (* (not "}")) ":private" (+ space) "true")))
+;;                       "comment")))
+;;       (zig-mode
+;;        . ,(rx bol (* space) "fn" (+ (not "{")) "{"))
+;;       (fennel-mode
+;;        . ,(rx bol "(" (or (seq (or "fn" "local" "var") (+ space) "-" alpha)
+;;                           "comment"))))
+;;     "Alist of major modes to regular expressions for finding private definitions")
+;;   (defun hs-hide-all-private ()
+;;     "Hide all private definitions in the current buffer.
+;; Search is based on regular expressions in the
+;; `hs-private-regex-mode-alist' variable."
+;;     (interactive)
+;;     (when hs-minor-mode
+;;       (if-let ((re (alist-get major-mode hs-mode-private-regex-alist nil nil
+;;                               (lambda (key1 key2)
+;;                                 (if (listp key1)
+;;                                     (and (memq key2 key1) t)
+;;                                   (eq key1 key2))))))
+;;           (save-excursion
+;;             (goto-char (point-max))
+;;             (while (re-search-backward re nil t)
+;;               (hs-hide-block)))
+;;         (error "Mode %s doesn't define a regex to find private definitions" major-mode))))
+;;   :config
+;;   (easy-menu-add-item hs-minor-mode-map '(menu-bar hide/show)
+;;                       ["Hide all private definitions" hs-hide-all-private
+;;                        :help "Hide all private definitions based on `hs-mode-private-regex-alist'."]
+;;                       "--")
+;;   (define-advice hs-toggle-hiding (:before (&rest _) move-point-to-mouse)
+;;     "Move point to the location of the mouse pointer."
+;;     (mouse-set-point last-input-event)))
+;;;; outline
+;; https://www.reddit.com/r/emacs/comments/e2u5n9/code_folding_with_outlineminormode/
+(use-package outline
+  undo
+  :hook ((prog-mode . outline-minor-mode))
+  :bind (:map outline-minor-mode-map
+              ([C-tab] . outline-cycle)
+              ("<backtab>" . outline-cycle-buffer)
+
+              ;; create separate keymap, otherwise Org gets confused
+              (:prefix-map my/outline-minor-mode-prefix-map)
+              (:prefix "C-M-o")
+              :map my/outline-minor-mode-prefix-map
+              ;; movement
+              ("n" . outline-next-visible-heading)
+              ("M-n" . outline-next-visible-heading)
+              ("p" . outline-previous-visible-heading)
+              ("M-p" . outline-previous-visible-heading)
+              ("f" . outline-forward-same-level)
+              ("M-f" . outline-forward-same-level)
+              ("b" . outline-backward-same-level)
+              ("M-b" . outline-backward-same-level)
+              ("u" . outline-up-heading)
+              ("M-u" . outline-up-heading)
+              ;; folding
+              ("t" . outline-hide-body)
+              ("M-t" . outline-hide-body)
+              ("a" . outline-show-all)
+              ("M-a" . outline-show-all)
+              ;; ("i" . outline-show-children)
+              ;; ("s" . outline-show-subtree)
+              ;; ("d" . outline-hide-subtree)
+              ;; ("c" . outline-hide-entry)
+              ;; ("e" . outline-show-entry)
+              ;; ("l" . outline-hide-leaves)
+              ;; ("k" . outline-show-branches)
+              ;; ("q" . outline-hide-sublevels)
+              ("o" . outline-hide-other)
+              ("M-o" . counsel-outline)))
 
 ;;;; helpful
 (use-package helpful
@@ -2214,6 +2268,11 @@ specific project."
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   :config
   (advice-add 'ediff-window-display-p :override #'ignore))
+
+(use-package direnv
+  :ensure t
+  :config
+ (direnv-mode))
 
 (use-package project
   :ensure t
