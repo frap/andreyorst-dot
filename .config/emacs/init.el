@@ -338,7 +338,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
    load-prefer-newer t
    truncate-lines t
    bidi-paragraph-direction 'left-to-right
-   frame-title-format "εmacs"
+   frame-title-format "Ɛmacs"
    auto-window-vscroll nil
    mouse-highlight t
    hscroll-step 1
