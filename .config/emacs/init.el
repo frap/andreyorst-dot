@@ -890,20 +890,20 @@ disabled, or enabled and the mark is active."
      local-config-light-theme)
    t))
 
-(use-package all-the-icons
-  :ensure t
-  :if (display-graphic-p)
-  :after (marginalia dired)
-  :init
-  (add-hook 'marginalia-mode #'all-the-icons-completion-marginalia-setup)
-  (add-hook 'dired-mode #'all-the-icons-dired-mode)
-  :config
-  (use-package all-the-icons-dired
-    :ensure t)
-  (use-package all-the-icons-completion
-    :ensure t)
-  :config
-  (all-the-icons-completion-mode 1))
+;; (use-package all-the-icons
+;;   :ensure t
+;;   :if (display-graphic-p)
+;;   :after (marginalia dired)
+;;   :init
+;;   (add-hook 'marginalia-mode #'all-the-icons-completion-marginalia-setup)
+;;   (add-hook 'dired-mode #'all-the-icons-dired-mode)
+;;   :config
+;;   (use-package all-the-icons-dired
+;;     :ensure t)
+;;   (use-package all-the-icons-completion
+;;     :ensure t)
+;;   :config
+;;   (all-the-icons-completion-mode 1))
 
 ;;;; uniquify-files
 (use-package uniquify-files
