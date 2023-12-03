@@ -314,7 +314,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
    load-prefer-newer t
    truncate-lines t
    bidi-paragraph-direction 'left-to-right
-   frame-title-format "Emacs"
+   frame-title-format "εmacs"
    auto-window-vscroll nil
    mouse-highlight t
    hscroll-step 1
@@ -345,6 +345,11 @@ If LOCAL-PORT is nil, PORT is used as local port."
 
 
 ;;; Core packages
+(use-package window
+  :config
+  (add-to-list 'display-buffer-alist
+               '("\\*Calendar*"
+                 (display-buffer-at-bottom))))
 
 (use-package messages
   :no-require
