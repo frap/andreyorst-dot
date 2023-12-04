@@ -21,64 +21,49 @@
   :no-require
   :hook (after-init . setup-fonts)
   :preface
-  (defun aorst/font-installed-p (font-name)
-    "Check if font with FONT-NAME is available."
+  (global-font-lock-mode 1)             ; Use font-lock everywhere.
+  (setq font-lock-maximum-decoration t) ; We have CPU to spare; highlight all syntax categories.
+  (defun font-installed-p (font-name)
+    "Check if a font with FONT-NAME is available."
     (if (find-font (font-spec :name font-name))
         t
       nil))
-  (defun font-installed-p (font-name)
-    "Check if a font with FONT-NAME is available."
-    (find-font (font-spec :name font-name)))
   (setq resolution-factor (eval (/ (x-display-pixel-height) 1000.0)))
   (defun setup-fonts ()
-    (cond ((font-installed-p "JetBrains Mono")
-           (set-face-attribute 'default nil :font "JetBrains Mono")) ;; :size (eval (round (* 14 resolution-factor)))
-          ((font-installed-p "Iosevka Curly")
-           (set-face-attribute 'default nil :font "Iosevka Curly")))
+    (cond  ((font-installed-p "Iosevka Curly")
+            (set-face-attribute 'default nil :font "Iosevka Curly"))
+           ((font-installed-p "JetBrainsMono")
+            (set-face-attribute 'default nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))
+            (set-face-attribute 'fixed-pitch nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))))
+
+    ;; For variable pitched fonts Iosevka Aile is used if available.
+    (when (font-installed-p "Iosevka Aile")
+      (set-face-attribute 'variable-pitch nil :font (font-spec :family "Iosevka Aile" :size 10.5 :weight 'regular))
+      (set-face-attribute 'font-lock-comment-face nil :family "Iosevka Aile Oblique" :height 106) ; :foreground "#5B6268"
+      (set-face-attribute 'font-lock-function-name-face nil :family "Iosevka Aile" :height 102 :slant 'italic :weight 'regular) ; 'medium
+      ;; (set-face-attribute 'font-lock-variable-name-face nil :foreground "#dcaeea" :weight 'bold)
+      (set-face-attribute 'font-lock-keyword-face nil :weight 'bold))
     (when (font-installed-p "Overpass")
       (set-face-attribute 'variable-pitch nil :font "Overpass")))
   ;; When Emacs is ran in GUI mode, configure common Emoji fonts, making it more
   ;; likely that Emoji will work out of the box
+  ;; Set up emoji rendering
   (when (display-graphic-p)
     (set-fontset-font t 'symbol "Apple Color Emoji")
     (set-fontset-font t 'symbol "Noto Color Emoji" nil 'append)
     (set-fontset-font t 'symbol "Segoe UI Emoji" nil 'append)
     (set-fontset-font t 'symbol "Symbola" nil 'append))
+
+  ;; Default Windows emoji font
+  (when (member "Segoe UI Emoji" (font-family-list))
+    (set-fontset-font t 'symbol (font-spec :family "Segoe UI Emoji") nil 'prepend)
+    (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Segoe UI Emoji"))
+
+  ;; Linux emoji font
+  (when (member "Noto Color Emoji" (font-family-list))
+    (set-fontset-font t 'symbol (font-spec :family "Noto Color Emoji") nil 'prepend)
+    (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Noto Color Emoji"))
   (provide 'font))
-
-;;________________________________________________________________
-;;;;    Fonts
-;;________________________________________________________________
-(global-font-lock-mode 1)             ; Use font-lock everywhere.
-(setq font-lock-maximum-decoration t) ; We have CPU to spare; highlight all syntax categories.
-
-;; Set the font face
-(cond ((aorst/font-installed-p "JetBrainsMono")
-       (set-face-attribute 'default nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))
-       (set-face-attribute 'fixed-pitch nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular)))
-      ((aorst/font-installed-p "Source Code Pro")
-       (set-face-attribute 'default nil :font "Source Code Pro 10")))
-
-;; For variable pitched fonts Iosevka Aile is used if available.
-(when (aorst/font-installed-p "Iosevka Aile")
-  (set-face-attribute 'variable-pitch nil :font (font-spec :family "Iosevka Aile" :size 10.5 :weight 'regular))
-  (set-face-attribute 'font-lock-comment-face nil :family "Iosevka Aile Oblique" :height 106) ; :foreground "#5B6268"
-  (set-face-attribute 'font-lock-function-name-face nil :family "Iosevka Aile" :height 102 :slant 'italic :weight 'regular) ; 'medium
-  ;; (set-face-attribute 'font-lock-variable-name-face nil :foreground "#dcaeea" :weight 'bold)
-  (set-face-attribute 'font-lock-keyword-face nil :weight 'bold)
-  )
-
-;; Set up emoji rendering
-;; Default Windows emoji font
-(when (member "Segoe UI Emoji" (font-family-list))
-  (set-fontset-font t 'symbol (font-spec :family "Segoe UI Emoji") nil 'prepend)
-  (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Segoe UI Emoji"))
-
-;; Linux emoji font
-(when (member "Noto Color Emoji" (font-family-list))
-  (set-fontset-font t 'symbol (font-spec :family "Noto Color Emoji") nil 'prepend)
-  (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Noto Color Emoji"))
-
 
 (use-package frame
   :requires seq
