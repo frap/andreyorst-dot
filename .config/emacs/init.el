@@ -1,8 +1,8 @@
 ;;; init.el --- Main configuration file -*- lexical-binding: t; no-byte-compile: t-*-
 
-;; Author: Andrey Listopadov
+;; Author: Red Elvis
 ;; Keywords: Emacs configuration
-;; Homepage: https://gitlab.com/andreyorst/dotfiles.git
+;; Homepage: https://gitlab.com/frap/dotfiles.git
 
 ;;; Commentary:
 ;; Emacs 29.1+ configuration.
