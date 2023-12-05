@@ -54,7 +54,7 @@
  vc-follow-symlinks t ; Do not ask about symlink following
  inhibit-default-init t
  inhibit-splash-screen t
- inhibit-startup-screen t 		; do not show the startup message
+ inhibit-startup-screen t 	; do not show the startup message
  inhibit-startup-message t      ; reduce noise at startup
  inhibit-startup-buffer-menu t  ; stop `list-buffers' from showing when opening multiple files
  fast-but-imprecise-scrolling t ; more performant rapid scrolling over unfontified regions

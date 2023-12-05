@@ -139,6 +139,7 @@ If you experience stuttering, increase this.")
            (smart-tab-mode " \\t" smart-tab)
            (eldoc-mode nil "eldoc")
            (rainbow-mode)
+           (clojure-mode "clj")
            (overwrite-mode " Ov" t)
            (emacs-lisp-mode "Ɛlisp" :major)))
 

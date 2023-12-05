@@ -35,6 +35,32 @@
 ;;   (interactive)
 ;;   (kill-buffer))
 
+
+;; ─────────────────────── Focus on newly created windows ──────────────────────
+
+;; (switch-to-buffer (other-buffer (current-buffer) t))
+(defun switcheroo ()
+  "Switch to the most recent other buffer, even if it's visible in another window."
+  (interactive)
+  (switch-to-buffer (other-buffer (current-buffer) t)))
+
+(defun split-and-follow-horizontally ()
+  "Split the window horizontally and navigate to the new window."
+  (interactive)
+  (split-window-below)
+  (balance-windows)
+  (other-window 1)
+  (switcheroo))
+
+(defun split-and-follow-vertically ()
+  "Split the window vertically and navigate to the new window."
+  (interactive)
+  (split-window-right)
+  (balance-windows)
+  (other-window 1)
+  (switcheroo))
+
+
 ;;----------------------------------------------------------------------
 ;;;; kill-region/quoted-insert
 (global-set-key (kbd "C-q") 'kill-or-quoted-insert)
@@ -101,6 +127,50 @@ With a prefix argument ARG, insert the next ARG characters literally."
     (goto-char current-point)))
 
 (global-set-key (kbd "C-x M-w") 'copy-buffer-and-stay)
+
+;; ───────────────────────────────── Smart Move ────────────────────────────────
+;; <https://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-beginning-of-a-line/>
+;; Actually there is M-m for back-to-indentation
+(defun smarter-move-beginning-of-line (arg)
+  "Move point back to indentation of beginning of line.
+
+Move point to the first non-whitespace character on this line.
+If point is already there, move to the beginning of the line.
+Effectively toggle between the first non-whitespace character and
+the beginning of the line.
+
+If ARG is not nil or 1, move forward ARG - 1 lines first.  If
+point reaches the beginning or end of the buffer, stop there."
+  (interactive "^p")
+  (setq arg (or arg 1))
+
+  ;; Move lines first
+  (when (/= arg 1)
+    (let ((line-move-visual nil))
+      (forward-line (- arg 1))))
+
+  (let ((orig-point (point)))
+    (move-beginning-of-line 1)
+    (when (= orig-point (point))
+      (back-to-indentation))))
+
+(define-key global-map
+  [remap move-beginning-of-line]
+  'smarter-move-beginning-of-line)
+
+;; *Second one for `first' goto-begin-char than line.
+
+;; (defun back-to-indentation/beginning-of-line ()
+;;   "Move cursor back to the beginning of the line.
+;; If it is at the beginning of the line it stays there."
+;;   (interactive)
+;;   (when (not (bolp))
+;;     (let ((p (point)))
+;;       (back-to-indentation)
+;;       (when (= p (point))
+;;         (beginning-of-line 1)))))
+
+;; (global-set-key (kbd "C-a") #'back-to-indentation/beginning-of-line)
 
 ;;----------------------------------------------------------------------
 ;;; keybindings
@@ -196,7 +266,7 @@ With a prefix argument ARG, insert the next ARG characters literally."
 (global-unset-key (kbd "C-w"))
 (global-set-key (kbd "C-w") (kbd "C-<backspace>")) ; 'backward-kill-word
 ;; instead of `BSP' I use `C-h'
-(global-set-key (kbd "C-h") (kbd "<backspace>")) ; 'backward-delete-char
+;;(global-set-key (kbd "C-h") (kbd "<backspace>")) ; 'backward-delete-char
 (global-set-key (kbd "C-S-H") (kbd "C-S-<backspace>")) ; 'kill-whole-line
 
 ;; (bind-key "\C-x\C-k"          'kill-region)
@@ -289,7 +359,7 @@ With a prefix argument ARG, insert the next ARG characters literally."
 ;; (bind-key "A-C-+"             'text-scale-adjust)
 
 ;; ;;; Customization
-;; (bind-key "C-h C-a"           'customize-apropos-all)
+(bind-key "C-h C-a"           'customize-apropos-all)
 ;; (bind-key "C-h C-a"           'customize-apropos)
 ;; (bind-key "C-h C-c"           'customize-apropos)
 ;; (bind-key "C-h C-r"           'customize-apropos)
@@ -310,7 +380,7 @@ With a prefix argument ARG, insert the next ARG characters literally."
 (global-set-key (kbd "C-!")   'eshell-here) ; see this function in `shell.el'
 ;; (bind-key "A-e"               'shell)
 ;; (bind-key "A-;"               'async-shell-command)
-;; (bind-key "M-!"               'async-shell-command)
+ (bind-key "M-!"               'async-shell-command)
 ;; (bind-key "C-M-!"             'shell-command)
 
 ;; ;;; Mac OS X

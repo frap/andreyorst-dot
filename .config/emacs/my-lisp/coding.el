@@ -72,6 +72,38 @@
           ;; doesn't work in terminal
           ("M-[" . puni-wrap-square)))
 
+;; ────────────────────────────── Prettify Symbols ─────────────────────────────
+(add-hook 'prog-mode-hook 'prettify-symbols-mode)
+(add-hook 'org-mode-hook 'prettify-symbols-mode)
+;; (remove-hook 'web-mode 'prettify-symbols-mode)
+
+;; Make some word or string show as pretty Unicode symbols.  See `https://unicodelookup.com' for more.
+(setq-default prettify-symbols-alist
+              '(("<-" . ?←)
+                ("->" . ?→)
+                ("->>" . ?↠)
+                ("=>" . ?⇒)
+                ;; ("/=" . ?≠)
+                ;; ("!=" . ?≠)
+                ;; ("==" . ?≡)
+                ;; ("<=" . ?≤)
+                ;; (">=" . ?≥)
+                ("=<<" . (?= (Br . Bl) ?≪))
+                (">>=" . (?≫ (Br . Bl) ?=))
+                ("<=<" . ?↢)
+                (">=>" . ?↣)
+                ("lambda" . 955)
+                ("delta" . 120517)
+                ("epsilon" . 120518)
+                ("<" . 10216)
+                (">" . 10217)
+                ;; ("[" . 10214)
+                ;; ("]" . 10215)
+                ("<<" . 10218)
+                (">>" . 10219)
+                ))
+(setq prettify-symbols-unprettify-at-point 'right-edge)
+
 ;;;;; rainbow
 (use-package rainbow-mode
   :ensure t
@@ -181,7 +213,6 @@
   (markdown-hr-display-char nil)
   (markdown-list-item-bullets '("-")))
 
-
 (use-package racket-mode
   :ensure t
   :hook ((racket-mode racket-repl-mode) . common-lisp-modes-mode))
@@ -196,8 +227,6 @@
    (add-hook 'yaml-mode-hook
              '(lambda ()
                 (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
-
-
 
 (use-package js
   :defer t
@@ -218,11 +247,6 @@
 ;;   ;; use our derived mode to map both .tsx AND .ts -> typescriptreact-mode -> treesitter tsx
 ;;   (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
 
-
-(use-package abbrev
-  :delight abbrev-mode
-  :custom
-  (save-abbrevs nil))
 
 (use-package lua-mode
   :ensure t

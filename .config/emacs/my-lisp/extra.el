@@ -36,29 +36,7 @@
 ;;; Code:
 
 
-;; ─────────────────────── Focus on newly created windows ──────────────────────
 
-;; (switch-to-buffer (other-buffer (current-buffer) t))
-(defun switcheroo ()
-  "Switch to the most recent other buffer, even if it's visible in another window."
-  (interactive)
-  (switch-to-buffer (other-buffer (current-buffer) t)))
-
-(defun split-and-follow-horizontally ()
-  "Split the window horizontally and navigate to the new window."
-  (interactive)
-  (split-window-below)
-  (balance-windows)
-  (other-window 1)
-  (switcheroo))
-
-(defun split-and-follow-vertically ()
-  "Split the window vertically and navigate to the new window."
-  (interactive)
-  (split-window-right)
-  (balance-windows)
-  (other-window 1)
-  (switcheroo))
 
 ;; ──────────────────────────────── Switch Theme ───────────────────────────────
 ;; (defun switch-theme (theme)
@@ -78,68 +56,7 @@
 ;;   (interactive)
 ;;   (mapc #'disable-theme custom-enabled-themes))
 
-(defun switch-theme (theme)
-  "Disable any currently active themes and load THEME."
-  ;; This interactive call is taken from `load-theme'
-  (interactive
-   (list
-    (intern (completing-read "Load custom theme: "
-                             (mapc 'symbol-name
-                                   (custom-available-themes))))))
-  (mapc #'disable-theme custom-enabled-themes)
-  (load-theme theme t))
 
-;; ──────────────────────────────── Transparency ───────────────────────────────
-(set-frame-parameter (selected-frame) 'alpha '(85 . 50))
-(add-to-list 'default-frame-alist '(alpha . (85 . 50)))
-;; (set-frame-parameter (selected-frame) 'alpha '(<active> . <inactive>))
-;; (set-frame-parameter (selected-frame) 'alpha <both>)
-
-;; Use the following snippet after you’ve set the alpha value
-(defun toggle-transparency ()
-  "Crave for transparency!"
-  (interactive)
-  (let ((alpha (frame-parameter nil 'alpha)))
-    (set-frame-parameter
-     nil 'alpha
-     (if (eql (cond ((numberp alpha) alpha)
-                    ((numberp (cdr alpha)) (cdr alpha))
-                    ;; Also handle undocumented (<active> <inactive>) form.
-                    ((numberp (cadr alpha)) (cadr alpha)))
-              100)
-         '(85 . 50) '(100 . 100)))))
-
-;; ────────────────────────────── Prettify Symbols ─────────────────────────────
-(add-hook 'prog-mode-hook 'prettify-symbols-mode)
-(add-hook 'org-mode-hook 'prettify-symbols-mode)
-;; (remove-hook 'web-mode 'prettify-symbols-mode)
-
-;; Make some word or string show as pretty Unicode symbols.  See `https://unicodelookup.com' for more.
-(setq-default prettify-symbols-alist
-              '(("<-" . ?←)
-                ("->" . ?→)
-                ("->>" . ?↠)
-                ("=>" . ?⇒)
-                ;; ("/=" . ?≠)
-                ;; ("!=" . ?≠)
-                ;; ("==" . ?≡)
-                ;; ("<=" . ?≤)
-                ;; (">=" . ?≥)
-                ("=<<" . (?= (Br . Bl) ?≪))
-                (">>=" . (?≫ (Br . Bl) ?=))
-                ("<=<" . ?↢)
-                (">=>" . ?↣)
-                ("lambda" . 955)
-                ("delta" . 120517)
-                ("epsilon" . 120518)
-                ("<" . 10216)
-                (">" . 10217)
-                ;; ("[" . 10214)
-                ;; ("]" . 10215)
-                ("<<" . 10218)
-                (">>" . 10219)
-                ))
-(setq prettify-symbols-unprettify-at-point 'right-edge)
 
 ;; ─────────────────── Added functionality (Generic usecases) ──────────────────
 ;; Unfill paragraph
@@ -148,7 +65,7 @@
   "Convert a multi-line paragraph into a single line of text."
   (interactive)
   (let ((fill-column (point-max)))
-	(fill-paragraph nil)))
+    (fill-paragraph nil)))
 
 (defun comment-pretty ()
   "Comment with '─' (C-x 8 RET BOX DRAWINGS LIGHT HORIZONTAL) on each side."
@@ -207,99 +124,16 @@
 (add-hook 'post-command-hook 'djcb-set-cursor-according-to-mode)
 ;; (add-hook 'eshell-mode-hook (lambda () (interactive) (setq-local cursor-type '(hbar . 3))))
 
-;; ───────────────────────────────── Smart Move ────────────────────────────────
-;; <https://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-beginning-of-a-line/>
-;; Actually there is M-m for back-to-indentation
-(defun smarter-move-beginning-of-line (arg)
-  "Move point back to indentation of beginning of line.
-
-Move point to the first non-whitespace character on this line.
-If point is already there, move to the beginning of the line.
-Effectively toggle between the first non-whitespace character and
-the beginning of the line.
-
-If ARG is not nil or 1, move forward ARG - 1 lines first.  If
-point reaches the beginning or end of the buffer, stop there."
-  (interactive "^p")
-  (setq arg (or arg 1))
-
-  ;; Move lines first
-  (when (/= arg 1)
-    (let ((line-move-visual nil))
-      (forward-line (- arg 1))))
-
-  (let ((orig-point (point)))
-    (move-beginning-of-line 1)
-    (when (= orig-point (point))
-      (back-to-indentation))))
-
-(define-key global-map
-  [remap move-beginning-of-line]
-  'smarter-move-beginning-of-line)
-
-;; *Second one for `first' goto-begin-char than line.
-
-;; (defun back-to-indentation/beginning-of-line ()
-;;   "Move cursor back to the beginning of the line.
-;; If it is at the beginning of the line it stays there."
-;;   (interactive)
-;;   (when (not (bolp))
-;;     (let ((p (point)))
-;;       (back-to-indentation)
-;;       (when (= p (point))
-;;         (beginning-of-line 1)))))
-
-;; (global-set-key (kbd "C-a") #'back-to-indentation/beginning-of-line)
-
-;; ────────────────────────────────── ibuffer ──────────────────────────────────
-;; Use human readable Size column instead of original one
-(eval-after-load 'ibuffer
-  '(progn
-     (define-ibuffer-column size-h
-       (:name "Size" :inline t)
-       (cond
-        ((> (buffer-size) 1000000) (format "%7.1fM" (/ (buffer-size) 1000000.0)))
-        ((> (buffer-size) 100000) (format "%7.0fk" (/ (buffer-size) 1000.0)))
-        ((> (buffer-size) 1000) (format "%7.1fk" (/ (buffer-size) 1000.0)))
-        (t (format "%8d" (buffer-size)))))))
-
-;; modify the default ibuffer-formats
-(setq ibuffer-formats
-      '((mark modified read-only " "
-              (name 18 18 :left :elide)
-              " "
-              (size-h 9 -1 :right)
-              " "
-              (mode 16 16 :left :elide)
-              " "
-              filename-and-process)))
 
 
-;; Switching to ibuffer puts the cursor on the most recent buffer
-(defadvice ibuffer
-    (around ibuffer-point-to-most-recent) ()
-    "Open ibuffer with cursor pointed to most recent buffer name.
-   This advice sets the cursor position to the name of the most recently
-   visited buffer when ibuffer is called. This makes it easier to quickly
-   switch back to a recent buffer without having to search for it in the list."
-    (let ((recent-buffer-name (buffer-name)))
-      ad-do-it
-      (ibuffer-jump-to-buffer recent-buffer-name)))
+
+
+
+
+
+
 (ad-activate 'ibuffer)
 
-;; ─────────────────────── Delete current file and buffer ──────────────────────
-;; based on http://emacsredux.com/blog/2013/04/03/delete-file-and-buffer/
-(defun delete-current-file-and-buffer ()
-  "Kill the current buffer and deletes the file it is visiting."
-  (interactive)
-  (let ((filename (buffer-file-name)))
-    (if filename
-        (if (y-or-n-p (concat "Do you really want to delete file " filename " ?"))
-            (progn
-              (delete-file filename)
-              (message "Deleted file %s." filename)
-              (kill-buffer)))
-      (message "Not a file visiting buffer!"))))
 
 ;; ─────────────────────────────────── Dired ───────────────────────────────────
 ;; http://whattheemacsd.com/
@@ -471,3 +305,5 @@ point reaches the beginning or end of the buffer, stop there."
 ;;     (when env-file
 ;;       (load-env-vars env-file)))
 ;;   )
+
+(provide 'extra)

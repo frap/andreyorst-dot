@@ -70,6 +70,8 @@
   :bind (("C-z" . ignore)
          ("C-x C-z" . ignore))
   :config
+  (set-frame-parameter (selected-frame) 'alpha '(85 . 50))
+  (add-to-list 'default-frame-alist '(alpha . (85 . 50)))
   (define-advice toggle-frame-fullscreen
       (:before (&optional frame) hide-menu-bar)
     "Hide menu bar when FRAME goes full screen."
@@ -82,7 +84,30 @@
     (let* ((default-frame-alist
             (seq-remove (lambda (elem) (eq (car elem) 'name))
                         (frame-parameters (selected-frame)))))
-      (funcall-interactively fn buffer-or-name norecord))))
+      (funcall-interactively fn buffer-or-name norecord)))
+  ;; Use the following snippet after you’ve set the alpha value
+(defun toggle-transparency ()
+  "Crave for transparency!"
+  (interactive)
+  (let ((alpha (frame-parameter nil 'alpha)))
+    (set-frame-parameter
+     nil 'alpha
+     (if (eql (cond ((numberp alpha) alpha)
+                    ((numberp (cdr alpha)) (cdr alpha))
+                    ;; Also handle undocumented (<active> <inactive>) form.
+                    ((numberp (cadr alpha)) (cadr alpha)))
+              100)
+         '(85 . 50) '(100 . 100)))))
+(defun switch-theme (theme)
+  "Disable any currently active themes and load THEME."
+  ;; This interactive call is taken from `load-theme'
+  (interactive
+   (list
+    (intern (completing-read "Load custom theme: "
+                             (mapc 'symbol-name
+                                   (custom-available-themes))))))
+  (mapc #'disable-theme custom-enabled-themes)
+  (load-theme theme t)))
 
 (use-package menu-bar
   :unless (display-graphic-p)
@@ -352,7 +377,7 @@ applied to the name.")
   (global-ligature-mode t))
 
 ;;;;; ligature-for-jetbrain
-(when (aorst/font-installed-p "JetBrainsMono")
+(when (font-installed-p "JetBrainsMono")
   (dolist (char/ligature-re
            `((?-  ,(rx (or (or "-->" "-<<" "->>" "-|" "-~" "-<" "->") (+ "-"))))
              (?/  ,(rx (or (or "/==" "/=" "/>" "/**" "/*") (+ "/"))))
