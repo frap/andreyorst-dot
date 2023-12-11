@@ -272,7 +272,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
    load-prefer-newer t
    truncate-lines t
    bidi-paragraph-direction 'left-to-right
-   frame-title-format "Ɛmacs"
+   frame-title-format  '(buffer-file-name "Ɛmacs: %b (%f)" "Ɛmacs: %b") ; name of the file I am editing as the name of the window.
    auto-window-vscroll nil
    mouse-highlight t
    hscroll-step 1
@@ -358,12 +358,6 @@ If LOCAL-PORT is nil, PORT is used as local port."
   :custom
   (scroll-margin 0))
 
-(use-package eldoc
-  :delight eldoc-mode
-  :defer t
-  :custom
-  (eldoc-echo-area-use-multiline-p nil))
-
 
 (use-package rect
   :bind (("C-x r C-y" . rectangle-yank-add-lines))
@@ -394,16 +388,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
     (forward-page (- (1+ count))) ; 1+ needed to actually cross page boundary
     (narrow-to-page)))
 
-(use-package profiler
-  :bind ("<f2>" . profiler-start-or-report)
-  :commands (profiler-report)
-  :preface
-  (defun profiler-start-or-report ()
-    (interactive)
-    (if (not (profiler-cpu-running-p))
-        (profiler-start 'cpu)
-      (profiler-report)
-      (profiler-cpu-stop))))
+
 
 ;; (use-package hideshow
 ;;   :hook (prog-mode . hs-minor-mode)
@@ -478,22 +463,13 @@ If LOCAL-PORT is nil, PORT is used as local port."
 ;; (ffap-bindings)
 ;; ;; Ask y or n instead of yes or no
 ;; (defalias 'yes-or-no-p 'y-or-n-p)
-;; ;; show zero-width characters
-;; (set-face-background 'glyphless-char "red")
-;; (electric-indent-mode nil)  ; Auto indentation.
-;; (global-subword-mode 1)     ; Iterate through CamelCase words.
-;; (global-auto-revert-mode 1) ; Automatically revert buffer when it changes on disk.
+
 ;; (mouse-avoidance-mode 'exile)
 ;; ;; Font lock of special Dash variables (it, acc, etc.). Comes default with Emacs.
 ;; (global-dash-fontify-mode)
 ;; (when window-system (global-prettify-symbols-mode t))
 
-;; ;;;; Modeline
-;; (size-indication-mode)
-;; (setq display-time-24hr-format t
-;;       ;; display-time-format "%l:%M%p" ;  %b %y"
-;;       display-time-default-load-average nil)
-;; (display-time-mode)
+
 
 ;; ;;;; General But Better Defaults
 ;; (setq-default
@@ -575,7 +551,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
 ;;  pgtk-wait-for-event-timeout 0.001
 ;;  display-line-numbers-type 'relative
 ;;  speedbar-show-unknown-files t ; browse source tree with Speedbar file browser
-;;  frame-title-format '(buffer-file-name "Emacs: %b (%f)" "Emacs: %b") ; name of the file I am editing as the name of the window.
+;;
 ;;  )
 
 ;;________________________________________________________________

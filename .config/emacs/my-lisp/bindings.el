@@ -35,7 +35,6 @@
 ;;   (interactive)
 ;;   (kill-buffer))
 
-
 ;; ─────────────────────── Focus on newly created windows ──────────────────────
 
 ;; (switch-to-buffer (other-buffer (current-buffer) t))
@@ -312,12 +311,7 @@ point reaches the beginning or end of the buffer, stop there."
 ;; (bind-key "M-H" (lambda () (interactive) (enlarge-window -1 t)))
 ;; (bind-key "M-L" (lambda () (interactive) (enlarge-window 1 t)))
 
-;;;;; windmove
-(windmove-default-keybindings)
-(bind-key "s-<left>"          'windmove-left)
-(bind-key "s-<right>"         'windmove-right)
-(bind-key "s-<down>"          'windmove-down)
-(bind-key "s-<up>"            'windmove-up)
+
 
 ;;;;; swap
 (bind-key "C-x <C-return>"    'window-swap-states)
@@ -358,7 +352,7 @@ point reaches the beginning or end of the buffer, stop there."
 ;; (bind-key "A-C-="             'text-scale-set)
 ;; (bind-key "A-C-+"             'text-scale-adjust)
 
-;; ;;; Customization
+;; ;;; Customisation
 (bind-key "C-h C-a"           'customize-apropos-all)
 ;; (bind-key "C-h C-a"           'customize-apropos)
 ;; (bind-key "C-h C-c"           'customize-apropos)
@@ -425,6 +419,33 @@ point reaches the beginning or end of the buffer, stop there."
     (let ((case-fold-search isearch-case-fold-search))
       (occur (if isearch-regexp isearch-string (regexp-quote isearch-string))))))
 
+(use-package bindings
+  :bind ( :map ctl-x-map
+          ("C-d" . dired-jump))
+  :preface
+  ;; set global keybindings
+  ;;; window management
+  (global-set-key (kbd "M-p") (kbd "C-- C-x o"))
+  (global-set-key (kbd "M-n") (kbd "C-x o"))
+  ;;;;; windmove
+  (windmove-default-keybindings)
+  (bind-key "s-<left>"          'windmove-left)
+  (bind-key "s-<right>"         'windmove-right)
+  (bind-key "s-<down>"          'windmove-down)
+  (bind-key "s-<up>"            'windmove-up)
+(global-set-key (kbd "M-j") 'windmove-down)
+  (global-set-key (kbd "M-k") 'windmove-up)
+  (global-set-key (kbd "M-h") 'windmove-left)
+  (global-set-key (kbd "M-l") 'windmove-right)
+  ;;; copy & eval
+  (global-set-key (kbd "s-v") 'clipboard-yank)
+  (global-set-key (kbd "s-k") 'kill-current-buffer)
+  (global-set-key (kbd "s-e") 'eval-region)
+  (global-set-key (kbd "s-b") 'eval-buffer)
+  (global-set-key (kbd "s-c") 'ns-copy-including-secondary)
+  (global-set-key (kbd "M-v") 'clipboard-yank)
+  :init
+  (setq mode-line-end-spaces nil))
 
 (provide 'bindings)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

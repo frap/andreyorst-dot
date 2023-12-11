@@ -8,28 +8,6 @@
 (use-package autorevert
   :hook (after-init . global-auto-revert-mode))
 
-(use-package bindings
-  :bind ( :map ctl-x-map
-          ("C-d" . dired-jump))
-  :preface
-  ;; set global keybindings
-  ;;; window management
-  (global-set-key (kbd "M-p") (kbd "C-- C-x o"))
-  (global-set-key (kbd "M-n") (kbd "C-x o"))
-  (global-set-key (kbd "M-j") 'windmove-down)
-  (global-set-key (kbd "M-k") 'windmove-up)
-  (global-set-key (kbd "M-h") 'windmove-left)
-  (global-set-key (kbd "M-l") 'windmove-right)
-  ;;; copy & eval
-  (global-set-key (kbd "s-v") 'clipboard-yank)
-  (global-set-key (kbd "s-k") 'kill-current-buffer)
-  (global-set-key (kbd "s-e") 'eval-region)
-  (global-set-key (kbd "s-b") 'eval-buffer)
-  (global-set-key (kbd "s-c") 'ns-copy-including-secondary)
-  (global-set-key (kbd "M-v") 'clipboard-yank)
-  :init
-  (setq mode-line-end-spaces nil))
-
 (use-package delsel
   :hook (after-init . delete-selection-mode))
 
@@ -73,6 +51,9 @@
             (executable-find "hunspell"))
   :hook ((org-mode git-commit-mode markdown-mode) . flyspell-mode))
 
+
+;; (electric-indent-mode nil)  ; Auto indentation.
+(global-subword-mode 1)     ; Iterate through CamelCase words.
 ;; ────────────────────────────────── ibuffer ──────────────────────────────────
 ;; Use human readable Size column instead of original one
 (eval-after-load 'ibuffer
@@ -84,7 +65,6 @@
         ((> (buffer-size) 100000) (format "%7.0fk" (/ (buffer-size) 1000.0)))
         ((> (buffer-size) 1000) (format "%7.1fk" (/ (buffer-size) 1000.0)))
         (t (format "%8d" (buffer-size)))))))
-
 
 (use-package ibuffer
   :bind (("C-x C-b" . ibuffer)

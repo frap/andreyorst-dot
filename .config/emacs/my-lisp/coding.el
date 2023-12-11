@@ -2,6 +2,61 @@
 
 ;;; Coding helpers
 
+(defun comment-pretty ()
+  "Comment with '─' (C-x 8 RET BOX DRAWINGS LIGHT HORIZONTAL) on each side."
+  (interactive)
+  (let* ((comment-char "─")
+         (comment (read-from-minibuffer "Comment: "))
+         (comment-length (length comment))
+         (current-column-pos (current-column))
+         (space-on-each-side (/ (- fill-column
+                                   current-column-pos
+                                   comment-length
+                                   (length comment-start)
+                                   ;; Single space on each side of comment
+                                   (if (> comment-length 0) 2 0)
+                                   ;; Single space after comment syntax sting
+                                   1)
+                                2)))
+    (if (< space-on-each-side 2)
+        (message "Comment string is too big to fit in one line")
+      (progn
+        (insert comment-start)
+        (when (equal comment-start ";")
+(insert comment-start))
+(insert " ")
+(dotimes (_ space-on-each-side) (insert comment-char))
+(when (> comment-length 0) (insert " "))
+(insert comment)
+(when (> comment-length 0) (insert " "))
+(dotimes (_ (if (= (% comment-length 2) 0)
+                (- space-on-each-side 1)
+              space-on-each-side))
+  (insert comment-char))))))
+
+;; accept completion from copilot and fallback to company
+(use-package copilot
+  ;; :vc (:url "https://gitlab.com/zerolfx/copilot.el.git"
+  ;;          :lisp-dir "elpa/")
+  ;; :ensure t
+  :hook (prog-mode . copilot-mode)
+  :bind (:map copilot-completion-map
+              ("<tab>" . 'copilot-accept-completion)
+              ("TAB" . 'copilot-accept-completion)
+              ("C-TAB" . 'copilot-accept-completion-by-word)
+              ("C-<tab>" . 'copilot-accept-completion-by-word)))
+
+;; get AWS .env variables
+(use-package direnv
+  :config
+  (direnv-mode))
+
+(use-package eldoc
+  :delight eldoc-mode
+  :defer t
+  :custom
+  (eldoc-echo-area-use-multiline-p nil))
+
 (use-package multiple-cursors
   :ensure t
   :bind
@@ -103,6 +158,17 @@
                 (">>" . 10219)
                 ))
 (setq prettify-symbols-unprettify-at-point 'right-edge)
+
+(use-package profiler
+  :bind ("<f2>" . profiler-start-or-report)
+  :commands (profiler-report)
+  :preface
+  (defun profiler-start-or-report ()
+    (interactive)
+    (if (not (profiler-cpu-running-p))
+        (profiler-start 'cpu)
+      (profiler-report)
+      (profiler-cpu-stop))))
 
 ;;;;; rainbow
 (use-package rainbow-mode

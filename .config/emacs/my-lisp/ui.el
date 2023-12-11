@@ -29,6 +29,8 @@
         t
       nil))
   (setq resolution-factor (eval (/ (x-display-pixel-height) 1000.0)))
+  ;; ;; show zero-width characters
+  (set-face-background 'glyphless-char "red")
   (defun setup-fonts ()
     (cond  ((font-installed-p "Iosevka Curly")
             (set-face-attribute 'default nil :font "Iosevka Curly"))
@@ -249,6 +251,12 @@ applied to the name.")
                   mode-line-buffer-encoding mode-line-line-encoding
                   mode-line-interactive-position (vc-mode vc-mode) " "
                   mode-line-modes " " mode-line-misc-info))
+  ;; ;;;; Modeline
+;; (size-indication-mode)
+;; (setq display-time-24hr-format t
+;;       ;; display-time-format "%l:%M%p" ;  %b %y"
+;;       display-time-default-load-average nil)
+;; (display-time-mode)
   (provide 'mode-line))
 
 (use-package modus-themes
