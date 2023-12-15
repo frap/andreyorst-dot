@@ -35,16 +35,26 @@
   (insert comment-char))))))
 
 ;; accept completion from copilot and fallback to company
+
 (use-package copilot
-  ;; :vc (:url "https://gitlab.com/zerolfx/copilot.el.git"
-  ;;          :lisp-dir "elpa/")
-  ;; :ensure t
-  :hook (prog-mode . copilot-mode)
-  :bind (:map copilot-completion-map
-              ("<tab>" . 'copilot-accept-completion)
-              ("TAB" . 'copilot-accept-completion)
+;; :straight
+ ;; (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+ :vc (copilot :url "https://github.com/zerolfx/copilot.el.git"
+      :repo zerolfx/copilot.el
+     ;; :url "https://github.com/zerolfx/copilot.el.git"
+           ;;:files ("dist" "*.el")
+      :lisp-dir "elpa/"
+      )
+:bind (:map copilot-completion-map
+        (("M-<return>" . copilot-accept-completion)
+         ("<tab>" . 'copilot-accept-completion)
+("TAB" . 'copilot-accept-completion)
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
+ :hook (prog-mode . copilot-mode)
+ :hook (yaml-mode . copilot-mode)
+ :config (setq copilot-max-char -1)
+ :ensure t)
 
 ;; get AWS .env variables
 (use-package direnv
@@ -624,7 +634,15 @@ specific project."
   :ensure t)
 
 (use-package terraform-mode
-  :ensure t)
+  :custom (terraform-format-on-save t)
+  :ensure t
+  :config
+  (defun my-terraform-mode-init ()
+    ;; if you want to use outline-minor-mode
+    (outline-minor-mode 1)
+    )
+
+  (add-hook 'terraform-mode-hook 'my-terraform-mode-init))
 
 (use-package yasnippet
   :ensure t
@@ -650,8 +668,23 @@ specific project."
   (setq yas-prompt-functions (delq #'yas-dropdown-prompt
                                    yas-prompt-functions)
   ;; yas-snippet-dirs '(file-templates-dir)
-))
+        ))
 
+(use-package yasnippet-classic-snippets
+ :ensure t
+ :demand t)
+
+(use-package consult-yasnippet
+ :ensure t
+ :after consult
+ :config (global-set-key (kbd "M-Y") 'consult-yasnippet))
+
+(use-package yasnippet-capf
+ :ensure t
+ :after cape
+ :init
+ (setq yasnippet-capf-lookup-by 'key) ;; key or name
+ :config (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 ;;; LSP
 
 (use-package lsp-mode

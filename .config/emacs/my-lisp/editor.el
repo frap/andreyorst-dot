@@ -1,10 +1,5 @@
 ;;; my-lisp/editor.el --- Emacs as an Editor -*- lexical-binding: t -*-
 
-(use-package abbrev
-  :delight abbrev-mode
-  :custom
-  (save-abbrevs nil))
-
 (use-package autorevert
   :hook (after-init . global-auto-revert-mode))
 
