@@ -18,6 +18,7 @@
                 :scale (+ 1.0 (* 0.25 text-scale-mode-amount)))))))))
 
 (use-package font
+  :straight nil
   :no-require
   :hook (after-init . setup-fonts)
   :preface
@@ -68,6 +69,7 @@
   (provide 'font))
 
 (use-package frame
+  :straight nil
   :requires seq
   :bind (("C-z" . ignore)
          ("C-x C-z" . ignore))
@@ -112,15 +114,18 @@
   (load-theme theme t)))
 
 (use-package menu-bar
+  :straight nil
   :unless (display-graphic-p)
   :config
   (menu-bar-mode -1))
 
 (use-package mouse
+  :straight nil
   :bind (("<mode-line> <mouse-2>" . nil)
          ("<mode-line> <mouse-3>" . nil)))
 
 (use-package mwheel
+  :straight nil
   :bind (("S-<down-mouse-1>" . nil)
          ("S-<mouse-3>" . nil)
          ("<mouse-4>" . mwheel-scroll)
@@ -188,6 +193,7 @@ Based on `so-long-detected-long-line-p'."
     (xterm-mouse-mode t)))
 
 (use-package mode-line
+  :straight nil
   :no-require
   :preface
   (defvar mode-line-interactive-position
@@ -279,6 +285,7 @@ applied to the name.")
   (region ((t :extend nil))))
 
 (use-package modus-themes
+  :straight nil
   :after modus-themes
   :no-require
   :custom
@@ -332,6 +339,7 @@ applied to the name.")
 
 
 (use-package tooltip
+  :straight nil
   :when (window-system)
   :custom
   (tooltip-x-offset 0)
@@ -343,6 +351,7 @@ applied to the name.")
      (no-special-glyphs . t))))
 
 (use-package window
+  :straight nil
   :config
   (add-to-list 'display-buffer-alist
                '("\\*Calendar*"

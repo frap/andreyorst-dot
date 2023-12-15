@@ -239,6 +239,7 @@
   :hook (before-save-hook . corfu-quit))
 
 (use-package corfu-popupinfo
+  :straight nil
   :bind ( :map corfu-popupinfo-map
           ("M-p" . corfu-popupinfo-scroll-down)
           ("M-n" . corfu-popupinfo-scroll-up))
@@ -288,9 +289,9 @@
   (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
 
   ;; Do not allow the cursor in the minibuffer prompt
-  (setq minibuffer-prompt-properties
-        '(read-only t cursor-intangible t face minibuffer-prompt))
-  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+  ;;(setq minibuffer-prompt-properties
+  ;;      '(read-only t cursor-intangible t face minibuffer-prompt))
+ ;; (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
   ;; Emacs 28: Hide commands in M-x which do not work in the current mode.
   ;; Vertico commands are hidden in normal buffers.
@@ -320,6 +321,7 @@
   :hook (after-init . vertico-mode))
 
 (use-package vertico-directory
+  :straight nil
   :after vertico
   :bind ( :map vertico-map
           ("RET" . vertico-directory-enter)
@@ -359,6 +361,7 @@
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
 (use-package isearch
+  :straight nil
   :bind ( :map isearch-mode-map
           ("<backspace>" . isearch-del-char)
           ("<left>" . isearch-edit-string)

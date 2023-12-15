@@ -13,6 +13,23 @@
 (defvar better-gc-cons-threshold 134217728 ; 128mb
   "If you experience freezing, decrease this.
 If you experience stuttering, increase this.")
+;;straight
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+(setq straight-use-package-by-default t)
+(straight-use-package 'use-package)
+(require 'use-package)
 
 ;; AutoGC
 (add-hook 'emacs-startup-hook
@@ -53,63 +70,14 @@ If you experience stuttering, increase this.")
 (defconst IS-LINIX?   (eq system-type 'gnu/linux))
 
 ;; emacsclient --no-wait--alternate-editor=emacs [FILE]
-(require 'server)
-(unless (server-running-p)
-  (server-start))
-
-;;; Generic packages
-(require 'package)
-;; Select the folder to store packages
-;; Comment / Uncomment to use desired sites
-(setq package-user-dir (expand-file-name "elpa" user-emacs-directory)
-      package-archives
-      '(("gnu"   . "https://elpa.gnu.org/packages/")
-        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-        ("melpa-stable" . "https://stable.melpa.org/packages/")
-        ("melpa" . "https://melpa.org/packages/")
-        ("org" . "https://orgmode.org/elpa/"))
-      package-quickstart nil)
-;; ("cselpa" . "https://elpa.thecybershadow.net/packages/")
-;; ("melpa-cn" . "http://mirrors.cloud.tencent.com/elpa/melpa/")
-;; ("gnu-cn"   . "http://mirrors.cloud.tencent.com/elpa/gnu/"))
-
-(setq package-archive-priorities
-      '(("melpa" .  4)
-        ("melpa-stable" . 3)
-        ("org" . 2)
-        ("gnu" . 1)))
-
-;; Configure Package Manager
-(unless (bound-and-true-p package--initialized)
-  (setq package-enable-at-startup nil) ; To prevent initialising twice
-  (package-initialize))
-
-;; set use-package-verbose to t for interpreted .emacs,
-;; and to nil for byte-compiled .emacs.elc.
-(eval-and-compile
-  (setq use-package-verbose (not (bound-and-true-p byte-compile-current-file))))
+;;(require 'server)
+;;(unless (server-running-p)
+;;  (server-start))
 
 
-;;; use-package
-;; Install use-package if not installed
-(eval-and-compile
-  (unless (and (fboundp 'package-installed-p)
-               (package-installed-p 'use-package))
-    (package-refresh-contents) ; update archives
-    (package-install 'use-package)) ; grab the newest use-package
-  (if init-file-debug
-      (setq use-package-compute-statistics t)
-    (setq use-package-compute-statistics nil))
-  (require 'use-package))
 
-;; Configure use-package
-(use-package use-package
-  :custom
-  (use-package-verbose t)
-;;  (use-package-always-ensure t)  ; :ensure t by default
-  (use-package-always-defer nil) ; :defer t by default
-  (use-package-expand-minimally t)
-  (use-package-enable-imenu-support t))
+(setq default-directory "~/")
+(use-package package)
 
 ;; ─────────────────── Additional Packages and Configurations ──────────────────
 ;; Add `:doc' support for use-package so that we can use it like what a doc-strings is for
@@ -143,11 +111,6 @@ If you experience stuttering, increase this.")
            (overwrite-mode " Ov" t)
            (emacs-lisp-mode "Ɛlisp" :major)))
 
-;;; PATH
-;; Add Lisp directory to `load-path'.
-;; Add our custom lisp modules to the Emacs load path so they can be discovered.
-(push (expand-file-name "my-lisp/" (file-name-directory user-init-file)) load-path)
-
 ;;; TODO - delete this?
 (defun update-aws-envs (fn)
   (let ((str
@@ -169,6 +132,7 @@ If you experience stuttering, increase this.")
 (setq exec-path (split-string (getenv "PATH") ":"))
 
 (use-package local-config
+  :straight nil
   :no-require
   :preface
   (defgroup local-config ()
@@ -193,6 +157,7 @@ If you experience stuttering, increase this.")
   (provide 'local-config))
 
 (use-package functions
+  :straight nil
   :no-require
   :preface
   (require 'subr-x)
@@ -265,6 +230,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
   (provide 'functions))
 
 (use-package defaults
+  :straight nil
   :no-require
   :preface
   (setq-default
@@ -318,6 +284,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
     (advice-add f :around #'block-undo)))
 
 (use-package subr
+  :straight nil
   :no-require
   :init
   (if (boundp 'use-short-answers)
@@ -325,7 +292,8 @@ If LOCAL-PORT is nil, PORT is used as local port."
     (fset 'yes-or-no-p 'y-or-n-p)))
 
 (use-package minibuffer
-  :hook (eval-expression-minibuffer-setup . common-lisp-modes-mode)
+  :straight nil
+;;  :hook (eval-expression-minibuffer-setup . common-lisp-modes-mode)
   :bind ( :map minibuffer-inactive-mode-map
           ("<mouse-1>" . ignore))
   :custom
@@ -336,23 +304,8 @@ If LOCAL-PORT is nil, PORT is used as local port."
   (completions-first-difference ((t (:inherit unspecified)))))
 
 
-;; (use-package all-the-icons
-;;   :ensure t
-;;   :if (display-graphic-p)
-;;   :after (marginalia dired)
-;;   :init
-;;   (add-hook 'marginalia-mode #'all-the-icons-completion-marginalia-setup)
-;;   (add-hook 'dired-mode #'all-the-icons-dired-mode)
-;;   :config
-;;   (use-package all-the-icons-dired
-;;     :ensure t)
-;;   (use-package all-the-icons-completion
-;;     :ensure t)
-;;   :config
-;;   (all-the-icons-completion-mode 1))
-
-
 (use-package pixel-scroll
+  :straight nil
   :when (fboundp #'pixel-scroll-precision-mode)
   :hook (after-init . pixel-scroll-precision-mode)
   :custom
@@ -360,6 +313,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
 
 
 (use-package rect
+  :straight nil
   :bind (("C-x r C-y" . rectangle-yank-add-lines))
   :preface
   (defun rectangle-yank-add-lines ()
@@ -371,6 +325,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
       (yank-rectangle))))
 
 (use-package page
+  :straight nil
   :bind ( :map narrow-map
           ("]" . narrow-forward-page)
           ("[" . narrow-backward-page))
@@ -445,13 +400,30 @@ If LOCAL-PORT is nil, PORT is used as local port."
 ;; (use-package message-view-patch
 ;;   :ensure t
 ;;   :hook (gnus-part-display . message-view-patch-highlight))
+;;; PATH
+;; Add Lisp directory to `load-path'.
+;; Add our custom lisp modules to the Emacs load path so they can be discovered.
+(push (expand-file-name "my-lisp/" (file-name-directory user-init-file)) load-path)
 
-(require 'bindings)
-(require 'editor)
-(require 'nav)
-(require 'tools)
-(require 'ui)
-(require 'coding)
+
+(use-package bindings
+  :straight nil
+  :load-path "my-lisp")
+(use-package editor
+  :straight nil
+  :load-path "my-lisp")
+(use-package nav
+  :straight nil
+  :load-path "my-lisp")
+(use-package tools
+ :straight nil
+ :load-path "my-lisp")
+(use-package ui
+  :straight nil
+  :load-path "my-lisp")
+(use-package coding
+  :straight nil
+  :load-path "my-lisp")
 
 
 ;;________________________________________________________________

@@ -37,20 +37,19 @@
 ;; accept completion from copilot and fallback to company
 
 (use-package copilot
-;; :straight
- ;; (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
- :vc (copilot :url "https://github.com/zerolfx/copilot.el.git"
-      :repo zerolfx/copilot.el
-     ;; :url "https://github.com/zerolfx/copilot.el.git"
-           ;;:files ("dist" "*.el")
-      :lisp-dir "elpa/"
-      )
-:bind (:map copilot-completion-map
+  :straight
+  (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+  ;;:vc (copilot :url "https://github.com/zerolfx/copilot.el.git"
+  ;; :repo zerolfx/copilot.el
+  ;; :url "https://github.com/zerolfx/copilot.el.git"
+  ;;:files ("dist" "*.el")
+  ;;:lisp-dir "elpa/"
+:bind ( :map copilot-completion-map
         (("M-<return>" . copilot-accept-completion)
          ("<tab>" . 'copilot-accept-completion)
-("TAB" . 'copilot-accept-completion)
-              ("C-TAB" . 'copilot-accept-completion-by-word)
-              ("C-<tab>" . 'copilot-accept-completion-by-word)))
+         ("TAB" . 'copilot-accept-completion)
+         ("C-TAB" . 'copilot-accept-completion-by-word)
+         ("C-<tab>" . 'copilot-accept-completion-by-word)))
  :hook (prog-mode . copilot-mode)
  :hook (yaml-mode . copilot-mode)
  :config (setq copilot-max-char -1)
@@ -82,6 +81,7 @@
    ("l" . mc/edit-ends-of-lines)))
 
 (use-package multiple-cursors-core
+  :straight nil
   :bind
   (( :map mc/keymap
      ("<return>" . nil)
@@ -204,7 +204,9 @@
          . rainbow-delimiters-mode))
 
 (use-package region-bindings
-  :vc (:url "https://gitlab.com/andreyorst/region-bindings.el.git")
+   :straight
+  (:host gitlab :repo "andreyorst/region-bindings.el")
+;;  :vc (:url "https://gitlab.com/andreyorst/region-bindings.el.git")
   :commands (region-bindings-mode)
   :preface
   (defun region-bindings-off ()
@@ -239,11 +241,14 @@
   (csv-align-max-width 80))
 
 (use-package elisp-mode
+  :straight nil
   :hook ((emacs-lisp-mode . eldoc-mode)
          (emacs-lisp-mode . common-lisp-modes-mode)))
 
 (use-package fennel-mode
-  :vc (:url "https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
+    :straight
+  (:url "https://git.sr.ht/~technomancy/fennel-mode" )
+ ;; :vc (:url c"https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
   :hook ((fennel-mode . fennel-proto-repl-minor-mode)
          ((fennel-mode
            fennel-repl-mode
@@ -269,10 +274,12 @@
   (dolist (sym '(global local var set))
     (put sym 'fennel-indent-function 1)))
 
-(use-package ob-fennel :after org)
+(use-package ob-fennel
+  :straight nil
+  :after org)
 
 (use-package isayt
-  :vc (:url "https://gitlab.com/andreyorst/isayt.el.git")
+  :straight (:host gitlab :repo "andreyorst/isayt.el")
   :delight isayt-mode
   :hook (common-lisp-modes-mode . isayt-mode))
 
@@ -330,9 +337,6 @@
   (lua-indent-level 4))
 
 (use-package ob-lua :after org)
-
-(use-package common-lisp-modes
-  :vc (:url "https://gitlab.com/andreyorst/common-lisp-modes.el.git"))
 
 (use-package clojure-mode
   :ensure t
@@ -460,17 +464,16 @@ See `cider-find-and-clear-repl-output' for more info."
                r
                (save-excursion
                  (end-of-defun)
-                 (point)))))
-)
+                 (point))))))
 
 ;; (use-package clj-ns-name
 ;;   :vc (:url "https://github.com/corgi-emacs/clj-ns-name.git")
 ;;   :config
 ;;   (clj-ns-name-install))
 
-(use-package walkclj
-  :ensure t
-  :vc (:url "https://github.com/corgi-emacs/walkclj.git"))
+;;(use-package walkclj
+;;  :ensure t
+;;  :vc (:url "https://github.com/corgi-emacs/walkclj.git"))
 
 ;; Most annoying JVM "feature" of all time
 ;; https://docs.cider.mx/cider/troubleshooting.html#empty-java-stacktraces
@@ -544,6 +547,7 @@ specific project."
   (clojure-mode))
 
 (use-package ob-clojure
+  :straight nil
   :after (cider org)
   :custom
   (org-babel-clojure-backend 'cider))
@@ -583,9 +587,11 @@ specific project."
 ;;   :defer t)
 
 (use-package lisp-mode
+  :straight nil
   :hook ((lisp-mode lisp-data-mode) . common-lisp-modes-mode))
 
 (use-package inf-lisp
+  :straight nil
   :hook (inferior-lisp-mode . common-lisp-modes-mode)
   :bind ( :map common-lisp-modes-mode-map
           ("C-M-k" . lisp-eval-each-sexp))
@@ -628,6 +634,7 @@ specific project."
   (sly-symbol-completion-mode -1))
 
 (use-package scheme
+  :straight nil
   :hook (scheme-mode . common-lisp-modes-mode))
 
 (use-package sql-indent
@@ -711,6 +718,7 @@ specific project."
   :commands lsp-ui-mode)
 
 (use-package lsp-completion
+  :straight nil
   :no-require
   :hook ((lsp-mode . lsp-completion-mode-maybe))
   :commands (lsp-completion-mode)
@@ -741,6 +749,7 @@ specific project."
         ))
 
 (use-package lsp-clojure
+  :straight nil
   :no-require
   :hook ((clojure-mode
           clojurec-mode
@@ -750,7 +759,8 @@ specific project."
 ;;; Navigation & Editing
 
 (use-package common-lisp-modes
-  :delight common-lisp-modes-mode
+  :straight  (:host gitlab :repo "andreyorst/common-lisp-modes.el" :files (:defaults "*.el"))
+;;  :delight common-lisp-modes-mode
   :preface
   (defun indent-sexp-or-fill ()
     "Indent an s-expression or fill string/comment."

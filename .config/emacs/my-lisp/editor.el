@@ -21,6 +21,7 @@
   :bind ("C-=" . er/expand-region))
 
 (use-package formfeed
+  :straight nil
   :no-require
   :hook ((help-mode
           org-mode
@@ -129,6 +130,7 @@
 ;;(setq ibuffer-default-sorting-mode 'recency)
 
 (use-package messages
+  :straight nil
   :no-require
   :preface
   (provide 'messages)
@@ -153,12 +155,14 @@
     (outline-minor-mode)))
 
 (use-package select
+  :straight nil
   :no-require
   :when (display-graphic-p)
   :custom
   (x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
 
 (use-package simple
+  :straight nil
   :bind (("M-z" . zap-up-to-char)
          ("M-S-z" . zap-to-char)
          ("C-x k" . kill-this-buffer)
@@ -213,6 +217,7 @@ disabled, or enabled and the mark is active."
   :hook (after-init . savehist-mode))
 
 (use-package startup
+  :straight nil
   :no-require
   :custom
   (inhibit-splash-screen t)

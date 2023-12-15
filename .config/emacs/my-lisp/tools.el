@@ -3,6 +3,7 @@
 ;;; Tools
 
 (use-package comint
+  :straight nil
   :defer t
   :custom
   (comint-scroll-show-maximum-output nil)
@@ -10,6 +11,7 @@
   (comint-input-ignoredups t))
 
 (use-package ediff
+  :straight nil
   :custom
   (ediff-split-window-function 'split-window-horizontally)
   (ediff-window-setup-function 'ediff-setup-windows-plain)
@@ -21,6 +23,7 @@
   :hook (eshell-load . eat-eshell-mode))
 
 (use-package esh-mode
+  :straight nil
   :hook (eshell-mode . common-lisp-modes-mode)
   :preface
   (declare-function eshell-search-path "ext:esh-ext")
@@ -59,6 +62,7 @@
   (eshell-banner-message ""))
 
 (use-package esh-module
+  :straight nil
   :after eshell
   :custom
   (eshell-modules-list
@@ -126,6 +130,7 @@ means save all with no questions."
                '(project-switch-to-buffer "Switch buffer")))
 
 (use-package vc-hooks
+  :straight nil
   :defer t
   :custom
   (vc-follow-symlinks t))
@@ -162,7 +167,7 @@ means save all with no questions."
 
 (use-package magit
   :ensure t
-    :defer t
+  :defer t
   :bind ("C-c g" . magit-status)
   :defines (magit-status-mode-map
             magit-revision-show-gravatars
@@ -260,6 +265,7 @@ means save all with no questions."
   :ensure t)
 
 (use-package server
+  :straight nil
   :commands (server-running-p)
   :init
   (unless (server-running-p)
@@ -286,6 +292,7 @@ means save all with no questions."
       "Edit, then exit with `\\[separedit-commit]' or abort with \\<edit-indirect-mode-map>`\\[edit-indirect-abort]'"))))
 
 (use-package recentf
+  :straight nil
   :hook (after-init . recentf-mode)
   :defines (recentf-exclude)
   :custom
@@ -302,6 +309,7 @@ means save all with no questions."
   :hook (prog-mode . hl-todo-mode))
 
 (use-package compile
+  :straight nil
   :hook
   (compilation-filter . ansi-color-compilation-filter)
   :custom
@@ -358,6 +366,7 @@ Set automatically by the `" (symbol-name compilation-mode-name) "'."))
          (provide ',compilation-mode-name)))))
 
 (use-package clojure-compilation-mode
+  :straight nil
   :no-require
   :preface
   (defun clojure-compilation--split-classpath (classpath)
@@ -498,6 +507,7 @@ dependency artifact based on the project's dependencies."
    :line 2 :col 3 :level 'warn :hyperlink 1 :highlight 1))
 
 (use-package fennel-compilation-mode
+  :straight nil
   :no-require
   :preface
   (define-project-compilation-mode fennel-compilation)
