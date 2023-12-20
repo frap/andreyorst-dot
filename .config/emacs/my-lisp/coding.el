@@ -1,5 +1,45 @@
 ;;; my-lisp/coding.el --- Emacs Coding -*- lexical-binding: t -*-
 
+;;; Navigation & Editing
+
+(use-package common-lisp-modes
+  :straight  nil ;;(:host gitlab :repo "andreyorst/common-lisp-modes.el" :files (:defaults "*.el"))
+;;  :delight common-lisp-modes-mode
+  :preface
+  (defun indent-sexp-or-fill ()
+    "Indent an s-expression or fill string/comment."
+    (interactive)
+    (let ((ppss (syntax-ppss)))
+      (if (or (nth 3 ppss)
+              (nth 4 ppss))
+          (fill-paragraph)
+        (save-excursion
+          (mark-sexp)
+          (indent-region (point) (mark))))))
+  ;;;###autoload
+  (define-minor-mode common-lisp-modes-mode
+    "Mode for enabling all modes that are common for lisps.
+
+For the reference, this is not a common-lisp modes mode, but a
+common lisp-modes mode.
+
+\\<common-lisp-modes-mode-map>"
+    :lighter " clmm"
+    :keymap (make-sparse-keymap))
+
+;;;###autoload
+  (define-minor-mode common-repl-modes-mode
+    "Mode for enabling all modes that are common for REPLs.
+
+ \\<common-repl-modes-mode-map>"
+    :lighter " crmm"
+    :keymap (make-sparse-keymap))
+
+  (provide 'common-lisp-modes)
+
+  :bind ( :map common-lisp-modes-mode-map
+          ("M-q" . indent-sexp-or-fill)))
+
 ;;; Coding helpers
 
 (defun comment-pretty ()
@@ -245,38 +285,38 @@
   :hook ((emacs-lisp-mode . eldoc-mode)
          (emacs-lisp-mode . common-lisp-modes-mode)))
 
-(use-package fennel-mode
-    :straight
-  (:url "https://git.sr.ht/~technomancy/fennel-mode" )
- ;; :vc (:url c"https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
-  :hook ((fennel-mode . fennel-proto-repl-minor-mode)
-         ((fennel-mode
-           fennel-repl-mode
-           fennel-proto-repl-mode)
-          . common-lisp-modes-mode))
-  :bind ( :map fennel-mode-map
-          ("M-." . xref-find-definitions)
-          ("M-," . xref-go-back)
-          :map fennel-repl-mode-map
-          ("C-c C-o" . fennel-repl-delete-all-output))
-  :custom
-  (fennel-eldoc-fontify-markdown t)
-  (fennel-scratch-use-proto-repl t)
-  :preface
-  (defun fennel-repl-delete-all-output ()
-    (interactive)
-    (save-excursion
-      (goto-char (process-mark (get-buffer-process (current-buffer))))
-      (forward-line 0)
-      (let ((inhibit-read-only t))
-        (delete-region (point) (point-min)))))
-  :config
-  (dolist (sym '(global local var set))
-    (put sym 'fennel-indent-function 1)))
+;; (use-package fennel-mode
+;;     :straight
+;;   (:url "https://git.sr.ht/~technomancy/fennel-mode" )
+;;  ;; :vc (:url c"https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
+;;   :hook ((fennel-mode . fennel-proto-repl-minor-mode)
+;;          ((fennel-mode
+;;            fennel-repl-mode
+;;            fennel-proto-repl-mode)
+;;           . common-lisp-modes-mode))
+;;   :bind ( :map fennel-mode-map
+;;           ("M-." . xref-find-definitions)
+;;           ("M-," . xref-go-back)
+;;           :map fennel-repl-mode-map
+;;           ("C-c C-o" . fennel-repl-delete-all-output))
+;;   :custom
+;;   (fennel-eldoc-fontify-markdown t)
+;;   (fennel-scratch-use-proto-repl t)
+;;   :preface
+;;   (defun fennel-repl-delete-all-output ()
+;;     (interactive)
+;;     (save-excursion
+;;       (goto-char (process-mark (get-buffer-process (current-buffer))))
+;;       (forward-line 0)
+;;       (let ((inhibit-read-only t))
+;;         (delete-region (point) (point-min)))))
+;;   :config
+;;   (dolist (sym '(global local var set))
+;;     (put sym 'fennel-indent-function 1)))
 
-(use-package ob-fennel
-  :straight nil
-  :after org)
+;; (use-package ob-fennel
+;;   :straight nil
+;;   :after org)
 
 (use-package isayt
   :straight (:host gitlab :repo "andreyorst/isayt.el")
@@ -296,20 +336,20 @@
   (markdown-hr-display-char nil)
   (markdown-list-item-bullets '("-")))
 
-(use-package racket-mode
-  :ensure t
-  :hook ((racket-mode racket-repl-mode) . common-lisp-modes-mode))
+;; (use-package racket-mode
+;;   :ensure t
+;;   :hook ((racket-mode racket-repl-mode) . common-lisp-modes-mode))
 
 (use-package yaml-mode
-   :mode ("\\.yml\\'" . yaml-mode)
-   :ensure t
-   :defer t
-   :custom
-   (yaml-indent-offset 2)
-   :config
-   (add-hook 'yaml-mode-hook
-             '(lambda ()
-                (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
+  :mode ("\\.yml\\'" . yaml-mode)
+  :ensure t
+  :defer t
+  :custom
+  (yaml-indent-offset 2)
+  :config
+  (add-hook 'yaml-mode-hook
+            '(lambda ()
+               (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
 
 (use-package js
   :defer t
@@ -336,7 +376,7 @@
   :custom
   (lua-indent-level 4))
 
-(use-package ob-lua :after org)
+;;(use-package ob-lua :after org)
 
 (use-package clojure-mode
   :ensure t
@@ -755,25 +795,6 @@ specific project."
           clojurec-mode
           clojurescript-mode)
          . lsp))
-
-;;; Navigation & Editing
-
-(use-package common-lisp-modes
-  :straight  (:host gitlab :repo "andreyorst/common-lisp-modes.el" :files (:defaults "*.el"))
-;;  :delight common-lisp-modes-mode
-  :preface
-  (defun indent-sexp-or-fill ()
-    "Indent an s-expression or fill string/comment."
-    (interactive)
-    (let ((ppss (syntax-ppss)))
-      (if (or (nth 3 ppss)
-              (nth 4 ppss))
-          (fill-paragraph)
-        (save-excursion
-          (mark-sexp)
-          (indent-region (point) (mark))))))
-  :bind ( :map common-lisp-modes-mode-map
-          ("M-q" . indent-sexp-or-fill)))
 
 
 (provide 'coding)
