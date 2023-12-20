@@ -22,51 +22,51 @@
   :ensure t
   :hook (eshell-load . eat-eshell-mode))
 
-(use-package esh-mode
-  :straight nil
-  :hook (eshell-mode . common-lisp-modes-mode)
-  :preface
-  (declare-function eshell-search-path "ext:esh-ext")
-  (defun eshell-prompt ()
-    (let* ((date (propertize (format-time-string "%a %H:%M") 'face '(:inherit shadow)))
-           (path (abbreviate-file-name default-directory))
-           (branch (when (and (eshell-search-path "git")
-                              (locate-dominating-file default-directory ".git"))
-                     (concat (propertize (propertize " on " 'face '(:inherit shadow)))
-                             (propertize (string-trim (shell-command-to-string "git branch --show-current"))
-                                         'face (if (string-empty-p (shell-command-to-string "git status --porcelain 2>/dev/null"))
-                                                   '(:inherit shadow)
-                                                 '(:inherit font-lock-builtin-face))))))
-           (container (cond
-                       ((file-exists-p "/run/.containerenv")
-                        (format " in %s"
-                                (with-temp-buffer
-                                  (save-match-data
-                                    (insert-file-contents "/run/.containerenv")
-                                    (re-search-forward "^name=\"\\([^\"]+\\)\"" nil t)
-                                    (switch-to-buffer (current-buffer))
-                                    (or (match-string-no-properties 1) "podman")))))
-                       ((file-exists-p "/.dockerenv") " in docker")))
-           (ssh (when (getenv "SSH_CONNECTION") " via ssh"))
-           (info (concat (or branch "")
-                         (propertize (concat (or container "")
-                                             (or ssh ""))
-                                     'face '(:inherit shadow))))
-           (prompt (if (= eshell-last-command-status 0)
-                       "$"
-                     (propertize "$" 'face '(:inherit error)))))
-      (concat date " " path info "\n" prompt " ")))
-  :custom
-  (eshell-scroll-show-maximum-output nil)
-  (eshell-prompt-function 'eshell-prompt)
-  (eshell-banner-message ""))
+;; (use-package esh-mode
+;;   :straight nil
+;;   :hook (eshell-mode . common-lisp-modes-mode)
+;;   :preface
+;;   (declare-function eshell-search-path "ext:esh-ext")
+;;   (defun eshell-prompt ()
+;;     (let* ((date (propertize (format-time-string "%a %H:%M") 'face '(:inherit shadow)))
+;;            (path (abbreviate-file-name default-directory))
+;;            (branch (when (and (eshell-search-path "git")
+;;                               (locate-dominating-file default-directory ".git"))
+;;                      (concat (propertize (propertize " on " 'face '(:inherit shadow)))
+;;                              (propertize (string-trim (shell-command-to-string "git branch --show-current"))
+;;                                          'face (if (string-empty-p (shell-command-to-string "git status --porcelain 2>/dev/null"))
+;;                                                    '(:inherit shadow)
+;;                                                  '(:inherit font-lock-builtin-face))))))
+;;            (container (cond
+;;                        ((file-exists-p "/run/.containerenv")
+;;                         (format " in %s"
+;;                                 (with-temp-buffer
+;;                                   (save-match-data
+;;                                     (insert-file-contents "/run/.containerenv")
+;;                                     (re-search-forward "^name=\"\\([^\"]+\\)\"" nil t)
+;;                                     (switch-to-buffer (current-buffer))
+;;                                     (or (match-string-no-properties 1) "podman")))))
+;;                        ((file-exists-p "/.dockerenv") " in docker")))
+;;            (ssh (when (getenv "SSH_CONNECTION") " via ssh"))
+;;            (info (concat (or branch "")
+;;                          (propertize (concat (or container "")
+;;                                              (or ssh ""))
+;;                                      'face '(:inherit shadow))))
+;;            (prompt (if (= eshell-last-command-status 0)
+;;                        "$"
+;;                      (propertize "$" 'face '(:inherit error)))))
+;;       (concat date " " path info "\n" prompt " ")))
+;;   :custom
+;;   (eshell-scroll-show-maximum-output nil)
+;;   (eshell-prompt-function 'eshell-prompt)
+;;   (eshell-banner-message ""))
 
-(use-package esh-module
-  :straight nil
-  :after eshell
-  :custom
-  (eshell-modules-list
-   (cl-remove 'eshell-term eshell-modules-list)))
+;; (use-package esh-module
+;;   :straight nil
+;;   :after eshell
+;;   :custom
+;;   (eshell-modules-list
+;;    (cl-remove 'eshell-term eshell-modules-list)))
 
 
 (use-package project
