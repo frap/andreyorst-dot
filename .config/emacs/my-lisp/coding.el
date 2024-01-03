@@ -1,10 +1,9 @@
 ;;; my-lisp/coding.el --- Emacs Coding -*- lexical-binding: t -*-
 
 ;;; Navigation & Editing
-
 (use-package common-lisp-modes
   :straight  nil ;;(:host gitlab :repo "andreyorst/common-lisp-modes.el" :files (:defaults "*.el"))
-;;  :delight common-lisp-modes-mode
+  ;;  :delight common-lisp-modes-mode
   :preface
   (defun indent-sexp-or-fill ()
     "Indent an s-expression or fill string/comment."
@@ -16,7 +15,7 @@
         (save-excursion
           (mark-sexp)
           (indent-region (point) (mark))))))
-  ;;;###autoload
+;;;###autoload
   (define-minor-mode common-lisp-modes-mode
     "Mode for enabling all modes that are common for lisps.
 
@@ -95,16 +94,34 @@ common lisp-modes mode.
  :config (setq copilot-max-char -1)
  :ensure t)
 
-;; get AWS .env variables
-(use-package direnv
-  :config
-  (direnv-mode))
-
 (use-package eldoc
   :delight eldoc-mode
   :defer t
   :custom
   (eldoc-echo-area-use-multiline-p nil))
+
+
+(use-package load-env-vars
+  :hook ((clojure-mode . @-set-project-env)
+         (lsp-mode     . @-set-project-env))
+  :config
+  (defvar @-dotenv-file-name ".env"
+  "The name of the .env file."
+  )
+  (defun @-find-env-file ()
+    "Find the closest .env file in the directory hierarchy."
+
+    (let* ((env-file-directory (locate-dominating-file "." @-dotenv-file-name))
+           (file-name (concat env-file-directory @-dotenv-file-name)))
+      (when (file-exists-p file-name)
+        file-name)))
+  (defun @-set-project-env ()
+  "Export all environment variables in the closest .env file."
+
+  (let ((env-file (@-find-env-file)))
+    (when env-file
+      (load-env-vars env-file))))
+  )
 
 (use-package multiple-cursors
   :ensure t
@@ -774,6 +791,7 @@ specific project."
   (lsp-treemacs-theme "Iconless"))
 
 (use-package lsp-clojure
+  :straight nil
   :demand t
   :after lsp-mode
   :hook (cider-mode . cider-toggle-lsp-completion-maybe)
