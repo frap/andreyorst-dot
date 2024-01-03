@@ -19,6 +19,14 @@
 ;;
 ;;; Code:
 
+  (when (equal system-type 'darwin)
+    ;; Configure mac modifiers to be what I expect
+    (with-no-warnings
+      (setq  ns-command-modifier 'super
+             ns-option-modifier 'meta
+             ns-right-option-modifier 'nil
+             ns-right-command-modifier 'nil)))
+
 ;; ───────────────────────── Generic Modified Functions ────────────────────────
 ;;; custom-function
 ;;;; window

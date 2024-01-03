@@ -74,8 +74,6 @@ If you experience stuttering, increase this.")
 ;;(unless (server-running-p)
 ;;  (server-start))
 
-
-
 (setq default-directory "~/")
 (use-package package)
 
@@ -111,24 +109,9 @@ If you experience stuttering, increase this.")
            (overwrite-mode " Ov" t)
            (emacs-lisp-mode "Ɛlisp" :major)))
 
-;;; TODO - delete this?
-(defun update-aws-envs (fn)
-  (let ((str
-         (with-temp-buffer
-           (insert-file-contents fn)
-           (buffer-string))) lst)
-    (setq lst (split-string str "\000"))
-    (while lst
-      (setq cur (car lst))
-      (when (string-match "^\\(AWS.*?\\)=\\(.*\\)" cur)
-        (setq var (match-string 1 cur))
-        (setq value (match-string 2 cur))
-        (setenv var value))
-      (setq lst (cdr lst)))))
-
 (if (not (getenv "TERM_PROGRAM"))
     (setenv "PATH"
-      (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
+            (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
 (setq exec-path (split-string (getenv "PATH") ":"))
 
 (use-package local-config
@@ -256,13 +239,6 @@ If LOCAL-PORT is nil, PORT is used as local port."
    ring-bell-function 'ignore ;turn off the bell noise
    mode-line-percent-position nil
    enable-recursive-minibuffers t)
-  (when (equal system-type 'darwin)
-    ;; Configure mac modifiers to be what I expect
-    (with-no-warnings
-      (setq  ns-command-modifier 'super
-             ns-option-modifier 'meta
-             ns-right-option-modifier 'nil
-             ns-right-command-modifier 'nil)))
   (when (version<= "27.1" emacs-version)
     (setq bidi-inhibit-bpa t))
   (provide 'defaults))
@@ -291,115 +267,10 @@ If LOCAL-PORT is nil, PORT is used as local port."
       (setq-default use-short-answers t)
     (fset 'yes-or-no-p 'y-or-n-p)))
 
-(use-package minibuffer
-  :straight nil
-;;  :hook (eval-expression-minibuffer-setup . common-lisp-modes-mode)
-  :bind ( :map minibuffer-inactive-mode-map
-          ("<mouse-1>" . ignore))
-  :custom
-  (completion-styles '(partial-completion basic))
-  (read-buffer-completion-ignore-case t)
-  (read-file-name-completion-ignore-case t)
-  :custom-face
-  (completions-first-difference ((t (:inherit unspecified)))))
-
-
-(use-package pixel-scroll
-  :straight nil
-  :when (fboundp #'pixel-scroll-precision-mode)
-  :hook (after-init . pixel-scroll-precision-mode)
-  :custom
-  (scroll-margin 0))
-
-
-(use-package rect
-  :straight nil
-  :bind (("C-x r C-y" . rectangle-yank-add-lines))
-  :preface
-  (defun rectangle-yank-add-lines ()
-    (interactive "*")
-    (when (use-region-p)
-      (delete-region (region-beginning) (region-end)))
-    (save-restriction
-      (narrow-to-region (point) (point))
-      (yank-rectangle))))
-
-(use-package page
-  :straight nil
-  :bind ( :map narrow-map
-          ("]" . narrow-forward-page)
-          ("[" . narrow-backward-page))
-  :preface
-  (defun narrow-forward-page (&optional count)
-    (interactive "p")
-    (or count (setq count 1))
-    (widen)
-    (forward-page count)
-    (narrow-to-page))
-  (defun narrow-backward-page (&optional count)
-    (interactive "p")
-    (or count (setq count 1))
-    (widen)
-    (forward-page (- (1+ count))) ; 1+ needed to actually cross page boundary
-    (narrow-to-page)))
-
-
-
-;; (use-package hideshow
-;;   :hook (prog-mode . hs-minor-mode)
-;;   :delight hs-minor-mode
-;;   :commands (hs-hide-block)
-;;   :bind ( :map hs-minor-mode-map
-;;           ("C-c @ C-p" . hs-hide-all-private))
-;;   :preface
-;;   (defvar hs-mode-private-regex-alist
-;;     `(((emacs-lisp-mode lisp-mode)
-;;        . ,(rx bol "(def" (+ (not space)) (+ space) (+ (not space)) "--"))
-;;       ((clojure-mode clojurescrip-mode clojurec-mode)
-;;        . ,(rx "(" (or "defn-"
-;;                       (seq "def" (* (not space)) (+ space)
-;;                            "^" (or ":private"
-;;                                    (seq "{" (* (not "}")) ":private" (+ space) "true")))
-;;                       "comment")))
-;;       (zig-mode
-;;        . ,(rx bol (* space) "fn" (+ (not "{")) "{"))
-;;       (fennel-mode
-;;        . ,(rx bol "(" (or (seq (or "fn" "local" "var") (+ space) "-" alpha)
-;;                           "comment"))))
-;;     "Alist of major modes to regular expressions for finding private definitions")
-;;   (defun hs-hide-all-private ()
-;;     "Hide all private definitions in the current buffer.
-;; Search is based on regular expressions in the
-;; `hs-private-regex-mode-alist' variable."
-;;     (interactive)
-;;     (when hs-minor-mode
-;;       (if-let ((re (alist-get major-mode hs-mode-private-regex-alist nil nil
-;;                               (lambda (key1 key2)
-;;                                 (if (listp key1)
-;;                                     (and (memq key2 key1) t)
-;;                                   (eq key1 key2))))))
-;;           (save-excursion
-;;             (goto-char (point-max))
-;;             (while (re-search-backward re nil t)
-;;               (hs-hide-block)))
-;;         (error "Mode %s doesn't define a regex to find private definitions" major-mode))))
-;;   (easy-menu-add-item hs-minor-mode-map '(menu-bar hide/show)
-;;                       ["Hide all private definitions" hs-hide-all-private
-;;                        :help "Hide all private definitions based on `hs-mode-private-regex-alist'."]
-;;                       "--")
-;;   (define-advice hs-toggle-hiding (:before (&rest _) move-point-to-mouse)
-;;     "Move point to the location of the mouse pointer."
-;;     (mouse-set-point last-input-event)))
 
 ;; (use-package repeat-mode
 ;;   :hook (after-init . repeat-mode))
 
-;;; Messaging
-
-
-;; (use-package message-view-patch
-;;   :ensure t
-;;   :hook (gnus-part-display . message-view-patch-highlight))
 ;;; PATH
 ;; Add Lisp directory to `load-path'.
 ;; Add our custom lisp modules to the Emacs load path so they can be discovered.

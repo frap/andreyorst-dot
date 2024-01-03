@@ -337,6 +337,12 @@ applied to the name.")
   ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
   )
 
+(use-package pixel-scroll
+  :straight nil
+  :when (fboundp #'pixel-scroll-precision-mode)
+  :hook (after-init . pixel-scroll-precision-mode)
+  :custom
+  (scroll-margin 0))
 
 (use-package tooltip
   :straight nil

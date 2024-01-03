@@ -305,6 +305,18 @@
   :ensure t
   :hook (after-init . marginalia-mode))
 
+(use-package minibuffer
+  :straight nil
+;;  :hook (eval-expression-minibuffer-setup . common-lisp-modes-mode)
+  :bind ( :map minibuffer-inactive-mode-map
+          ("<mouse-1>" . ignore))
+  :custom
+  (completion-styles '(partial-completion basic))
+  (read-buffer-completion-ignore-case t)
+  (read-file-name-completion-ignore-case t)
+  :custom-face
+  (completions-first-difference ((t (:inherit unspecified)))))
+
 (use-package orderless
   :ensure t
   :defer t
@@ -391,30 +403,67 @@
   ([remap describe-variable] . helpful-variable)
   ([remap describe-function] . helpful-callable))
 
+(use-package page
+  :straight nil
+  :bind ( :map narrow-map
+          ("]" . narrow-forward-page)
+          ("[" . narrow-backward-page))
+  :preface
+  (defun narrow-forward-page (&optional count)
+    (interactive "p")
+    (or count (setq count 1))
+    (widen)
+    (forward-page count)
+    (narrow-to-page))
+  (defun narrow-backward-page (&optional count)
+    (interactive "p")
+    (or count (setq count 1))
+    (widen)
+    (forward-page (- (1+ count))) ; 1+ needed to actually cross page boundary
+    (narrow-to-page)))
+
+(use-package rect
+  :straight nil
+  :bind (("C-x r C-y" . rectangle-yank-add-lines))
+  :preface
+  (defun rectangle-yank-add-lines ()
+    (interactive "*")
+    (when (use-region-p)
+      (delete-region (region-beginning) (region-end)))
+    (save-restriction
+      (narrow-to-region (point) (point))
+      (yank-rectangle))))
+
 (use-package  which-key
   :hook (after-init . which-key-mode)
   :init (setq which-key-sort-order #'which-key-key-order-alpha
-                which-key-sort-uppercase-first nil
-                which-key-add-column-padding 1
-                which-key-max-display-columns nil
-                which-key-min-display-lines 6
-                which-key-side-window-slot -10)
-    :config
-    (setq which-key-idle-delay 0.2)
-    (setq which-key-idle-secondary-delay 0.1)
-    (which-key-setup-side-window-bottom)
-    (setq which-key-replacement-alist
-          '((("left") . ("🡸"))
-            (("right") . ("🡺"))
-            (("up") . ("🡹"))
-            (("down") . ("🡻"))
-            (("delete") . ("DEL"))
-            (("\\`DEL\\'") . ("BKSP"))
-            (("RET") . ("⏎"))
-            ))
-    (which-key-setup-minibuffer)
-    ;;  (:with-hook which-key-init-buffer-hook
-    ;;  (:hook (lambda (setq line-spacing 4))))
-    )
+              which-key-sort-uppercase-first nil
+              which-key-add-column-padding 1
+              which-key-max-display-columns nil
+              which-key-min-display-lines 6
+              which-key-side-window-slot -10)
+  :config
+  (setq which-key-idle-delay 0.2)
+  (setq which-key-idle-secondary-delay 0.1)
+  (which-key-setup-side-window-bottom)
+  (setq which-key-replacement-alist
+        '((("left") . ("🡸"))
+          (("right") . ("🡺"))
+          (("up") . ("🡹"))
+          (("down") . ("🡻"))
+          (("delete") . ("DEL"))
+          (("\\`DEL\\'") . ("BKSP"))
+          (("RET") . ("⏎"))
+          ))
+  (which-key-setup-minibuffer)
+  ;;  (:with-hook which-key-init-buffer-hook
+  ;;  (:hook (lambda (setq line-spacing 4))))
+  )
+
+;;; Messaging
+
+;; (use-package message-view-patch
+;;   :ensure t
+;;   :hook (gnus-part-display . message-view-patch-highlight))
 
 (provide 'nav)
