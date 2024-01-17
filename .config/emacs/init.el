@@ -30,6 +30,8 @@ If you experience stuttering, increase this.")
 (setq straight-use-package-by-default t)
 (straight-use-package 'use-package)
 (require 'use-package)
+;; load org early
+(straight-use-package 'org)
 
 ;; AutoGC
 (add-hook 'emacs-startup-hook
@@ -293,6 +295,9 @@ If LOCAL-PORT is nil, PORT is used as local port."
   :straight nil
   :load-path "my-lisp")
 (use-package coding
+  :straight nil
+  :load-path "my-lisp")
+(use-package my-org
   :straight nil
   :load-path "my-lisp")
 

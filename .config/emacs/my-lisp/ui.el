@@ -29,25 +29,30 @@
     (if (find-font (font-spec :name font-name))
         t
       nil))
+  ;; Set reusable font name variables
+  (defvar my/fixed-width-font "JetBrains Mono"
+    "The font to use for monospaced (fixed width) text.")
+
+  (defvar my/variable-width-font "Iosevka Aile"
+    "The font to use for variable-pitch (document) text.")
   (setq resolution-factor (eval (/ (x-display-pixel-height) 1000.0)))
   ;; ;; show zero-width characters
   (set-face-background 'glyphless-char "red")
   (defun setup-fonts ()
-    (cond  ((font-installed-p "Iosevka Curly")
-            (set-face-attribute 'default nil :font "Iosevka Curly"))
-           ((font-installed-p "JetBrainsMono")
-            (set-face-attribute 'default nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))
-            (set-face-attribute 'fixed-pitch nil :font (font-spec :family "JetBrainsMono" :size 10.0 :weight 'regular))))
+    (when (font-installed-p my/fixed-width-font)
+           (set-face-attribute 'default nil :font (font-spec :family my/fixed-width-font :height 180 :weight 'light))
+           (set-face-attribute 'fixed-pitch nil :font (font-spec :family my/fixed-width-font :height 190 :weight 'light)))
 
     ;; For variable pitched fonts Iosevka Aile is used if available.
-    (when (font-installed-p "Iosevka Aile")
-      (set-face-attribute 'variable-pitch nil :font (font-spec :family "Iosevka Aile" :size 10.5 :weight 'regular))
-      (set-face-attribute 'font-lock-comment-face nil :family "Iosevka Aile Oblique" :height 106) ; :foreground "#5B6268"
-      (set-face-attribute 'font-lock-function-name-face nil :family "Iosevka Aile" :height 102 :slant 'italic :weight 'regular) ; 'medium
+    (when (font-installed-p my/variable-width-font)
+      (set-face-attribute 'variable-pitch nil :font  my/variable-width-font :height 1.3 :weight 'regular)
+      ;;  (set-face-attribute 'font-lock-comment-face nil :family "Iosevka Aile Oblique" :height 106) ; :foreground "#5B6268"
+      ;; (set-face-attribute 'font-lock-function-name-face nil :family "Iosevka Aile" :height 102 :slant 'italic :weight 'regular) ; 'medium
       ;; (set-face-attribute 'font-lock-variable-name-face nil :foreground "#dcaeea" :weight 'bold)
-      (set-face-attribute 'font-lock-keyword-face nil :weight 'bold))
-    (when (font-installed-p "Overpass")
-      (set-face-attribute 'variable-pitch nil :font "Overpass")))
+      ;;(set-face-attribute 'font-lock-keyword-face nil :weight 'bold)
+      ))
+  ;; (when (font-installed-p "Overpass")
+  ;;   (set-face-attribute 'variable-pitch nil :font "Overpass")))
   ;; When Emacs is ran in GUI mode, configure common Emoji fonts, making it more
   ;; likely that Emoji will work out of the box
   ;; Set up emoji rendering
@@ -57,15 +62,36 @@
     (set-fontset-font t 'symbol "Segoe UI Emoji" nil 'append)
     (set-fontset-font t 'symbol "Symbola" nil 'append))
 
-  ;; Default Windows emoji font
-  (when (member "Segoe UI Emoji" (font-family-list))
-    (set-fontset-font t 'symbol (font-spec :family "Segoe UI Emoji") nil 'prepend)
-    (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Segoe UI Emoji"))
+    ;; presentation-mode
+    ;; Load org-faces to make sure we can set appropriate faces
+    (require 'org-faces)
 
-  ;; Linux emoji font
-  (when (member "Noto Color Emoji" (font-family-list))
-    (set-fontset-font t 'symbol (font-spec :family "Noto Color Emoji") nil 'prepend)
-    (set-fontset-font "fontset-default" '(#xFE00 . #xFE0F) "Noto Color Emoji"))
+    ;; Hide emphasis markers on formatted text
+    (setq org-hide-emphasis-markers t)
+
+                                        ; Resize Org headings
+    (dolist (face '((org-level-1 . 1.2)
+                    (org-level-2 . 1.1)
+                    (org-level-3 . 1.05)
+                    (org-level-4 . 1.0)
+                    (org-level-5 . 1.1)
+                    (org-level-6 . 1.1)
+                    (org-level-7 . 1.1)
+                    (org-level-8 . 1.1)))
+      (set-face-attribute (car face) nil :font my/variable-width-font :weight 'medium :height (cdr face)))
+
+    ;; Make the document title a bit bigger
+    (set-face-attribute 'org-document-title nil :font my/variable-width-font :weight 'bold :height 1.3)
+
+    ;; Make sure certain org faces use the fixed-pitch face when variable-pitch-mode is on
+    (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
   (provide 'font))
 
 (use-package frame
