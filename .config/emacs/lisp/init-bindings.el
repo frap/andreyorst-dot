@@ -1,4 +1,4 @@
-;;; bindings.el --- Gas Global keybindings -*- lexical-binding: t; -*-
+;;; lsip/init-bindings.el --- Gas Global keybindings -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2023 Andrés Gasson
 ;;
@@ -26,6 +26,122 @@
              ns-option-modifier 'meta
              ns-right-option-modifier 'nil
              ns-right-command-modifier 'nil)))
+
+
+;; use-package is built-in as of Emacs 29, but since we use :bind, we
+;; need to load bind-key. If we forget, we get the error: Symbol's
+;; value as variable is void: personal-keybindings.
+(use-package bind-key
+  :demand t
+  :bind
+  (:prefix-map gas/files-map
+               :prefix "C-c f")
+  :bind
+  (:prefix-map gas/toggles-map
+               :prefix "C-c t")
+  :bind
+  (:prefix-map gas/goto
+               :prefix "C-c j"))
+
+;; use evil when "C-c t e"
+(use-package evil
+  :bind
+  (:map gas/toggles-map
+        ("e" . evil-mode)))
+
+(defun gas/unbind-all (fn)
+  "Unbinds a function everywhere."
+  (dolist (key (where-is-internal fn nil))
+    (unbind-key key)))
+
+;; avy is a GNU Emacs package for jumping to visible text using a
+;; char-based decision tree
+(use-package avy
+  :bind
+  (("C-'" . 'avy-goto-char)
+   ("C-:" . 'avy-goto-char-2)
+   ;; ("M-" . 'avy-copy-line)
+   ;; ("M-" . 'avy-copy-region)
+   ;; ("C-c C-j" . 'avy-resume)
+   (:map gas/goto
+         ("c" . #'avy-goto-char)
+         ("j" . #'avy-goto-word-0)
+         ("e" . #'avy-goto-word-0)
+         ("w" . #'avy-goto-word-1)
+         ("l" . #'avy-goto-line)
+         ("r" . 'avy-move-region)))
+
+  :config
+   (setq avy-ignored-modes '(image-mode doc-view-mode pdf-view-mode exwm-mode))
+   :custom
+   (avy-timeout-seconds 0.5)
+   (avy-style 'pre))
+
+(use-package kmacro
+  :defer t
+  :preface
+  (defun block-undo (fn &rest args)
+    (let ((marker (prepare-change-group)))
+      (unwind-protect (apply fn args)
+        (undo-amalgamate-change-group marker))))
+  :config
+  (dolist (f '(kmacro-call-macro
+               kmacro-exec-ring-item
+               apply-macro-to-region-lines))
+    (advice-add f :around #'block-undo)))
+
+(use-package  which-key
+  :hook (after-init . which-key-mode)
+  :init (setq which-key-sort-order #'which-key-key-order-alpha
+              which-key-sort-uppercase-first nil
+              which-key-add-column-padding 1
+              which-key-max-display-columns nil
+              which-key-min-display-lines 6
+              which-key-side-window-slot -10)
+  :config
+  (setq which-key-idle-delay 0.2)
+  (setq which-key-idle-secondary-delay 0.1)
+  (which-key-setup-side-window-bottom)
+  (setq which-key-replacement-alist
+        '((("left") . ("🡸"))
+          (("right") . ("🡺"))
+          (("up") . ("🡹"))
+          (("down") . ("🡻"))
+          (("delete") . ("DEL"))
+          (("\\`DEL\\'") . ("BKSP"))
+          (("RET") . ("⏎"))
+          ))
+  (which-key-setup-minibuffer)
+  ;;  (:with-hook which-key-init-buffer-hook
+  ;;  (:hook (lambda (setq line-spacing 4))))
+  )
+
+;; C-h C-h shadows which-key with something less useful.
+(gas/unbind-all 'help-for-help)
+
+;;;Help
+;;;; helpful
+(use-package helpful
+  :doc "Helpful improves the built-in Emacs help system by providing more contextual information."
+  :commands (helpful-callable helpful-variable helpful-command helpful-symbol helpful-key)
+  :custom
+  (counsel-describe-function-function #'helpful-callable)
+  (counsel-describe-variable-function #'helpful-variable)
+  :bind
+  (("C-h f" . #'helpful-callable)
+         ("C-h v" . #'helpful-variable)
+         ("C-h k" . #'helpful-key)
+         ("C-c C-d" . #'helpful-at-point)
+         ("C-h F" . #'helpful-function)
+         ("C-h C" . #'helpful-command)
+         ([remap describe-key]      . helpful-key)
+         ([remap describe-symbol]   . helpful-symbol)
+         ([remap describe-command]  . helpful-command)
+         ([remap describe-variable] . helpful-variable)
+         ([remap describe-function] . helpful-callable)))
+;; :custom-face
+;; (avy-lead-face ((t (:background "#51afef" :foreground "#870000" :weight bold)))))
+
 
 ;; ───────────────────────── Generic Modified Functions ────────────────────────
 ;;; custom-function
@@ -239,9 +355,9 @@ point reaches the beginning or end of the buffer, stop there."
 (global-set-key (kbd "C-`") 'duplicate-current-line)
 (global-set-key (kbd "C-~") 'duplicate-current-word)
 (global-set-key (kbd "C-c C-d") 'kill-ring-save-current-line) ; C-<insert>
-(add-hook 'c-mode-common-hook
-          (lambda ()
-            (local-set-key (kbd "C-c C-d") 'kill-ring-save-current-line)))
+;; (add-hook 'c-mode-common-hook
+;;           (lambda ()
+;;             (local-set-key (kbd "C-c C-d") 'kill-ring-save-current-line)))
 
 ;; (bind-key "C-x M-$"           'ispell-buffer)
 ;; (bind-key "M-;"               'comment-or-uncomment-current-line-or-region)
@@ -456,7 +572,7 @@ point reaches the beginning or end of the buffer, stop there."
   :init
   (setq mode-line-end-spaces nil))
 
-(provide 'bindings)
+(provide 'init-bindings)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; bindings.el ends here
 ;; Local Variables:

@@ -1,4 +1,8 @@
 ;;; my-lisp/coding.el --- Emacs Coding -*- lexical-binding: t -*-
+;;; comment-dwim-2
+(use-package comment-dwim-2
+  :bind ("M-;" . 'comment-dwim-2)
+  :delight)
 
 ;;; Navigation & Editing
 (use-package common-lisp-modes
@@ -18,7 +22,6 @@
 ;;;###autoload
   (define-minor-mode common-lisp-modes-mode
     "Mode for enabling all modes that are common for lisps.
-
 For the reference, this is not a common-lisp modes mode, but a
 common lisp-modes mode.
 
@@ -40,66 +43,14 @@ common lisp-modes mode.
           ("M-q" . indent-sexp-or-fill)))
 
 ;;; Coding helpers
+;; (use-package eldoc
+;;   :delight eldoc-mode
+;;   :defer t
+;;   :custom
+;;   (eldoc-echo-area-use-multiline-p nil))
 
-(defun comment-pretty ()
-  "Comment with '─' (C-x 8 RET BOX DRAWINGS LIGHT HORIZONTAL) on each side."
-  (interactive)
-  (let* ((comment-char "─")
-         (comment (read-from-minibuffer "Comment: "))
-         (comment-length (length comment))
-         (current-column-pos (current-column))
-         (space-on-each-side (/ (- fill-column
-                                   current-column-pos
-                                   comment-length
-                                   (length comment-start)
-                                   ;; Single space on each side of comment
-                                   (if (> comment-length 0) 2 0)
-                                   ;; Single space after comment syntax sting
-                                   1)
-                                2)))
-    (if (< space-on-each-side 2)
-        (message "Comment string is too big to fit in one line")
-      (progn
-        (insert comment-start)
-        (when (equal comment-start ";")
-(insert comment-start))
-(insert " ")
-(dotimes (_ space-on-each-side) (insert comment-char))
-(when (> comment-length 0) (insert " "))
-(insert comment)
-(when (> comment-length 0) (insert " "))
-(dotimes (_ (if (= (% comment-length 2) 0)
-                (- space-on-each-side 1)
-              space-on-each-side))
-  (insert comment-char))))))
-
-;; accept completion from copilot and fallback to company
-
-(use-package copilot
-  :straight
-  (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-  ;;:vc (copilot :url "https://github.com/zerolfx/copilot.el.git"
-  ;; :repo zerolfx/copilot.el
-  ;; :url "https://github.com/zerolfx/copilot.el.git"
-  ;;:files ("dist" "*.el")
-  ;;:lisp-dir "elpa/"
-:bind ( :map copilot-completion-map
-        (("M-<return>" . copilot-accept-completion)
-         ("<tab>" . 'copilot-accept-completion)
-         ("TAB" . 'copilot-accept-completion)
-         ("C-TAB" . 'copilot-accept-completion-by-word)
-         ("C-<tab>" . 'copilot-accept-completion-by-word)))
- :hook (prog-mode . copilot-mode)
- :hook (yaml-mode . copilot-mode)
- :config (setq copilot-max-char -1)
- :ensure t)
-
-(use-package eldoc
-  :delight eldoc-mode
-  :defer t
-  :custom
-  (eldoc-echo-area-use-multiline-p nil))
-
+(use-package eldoc-box
+  :delight)
 
 (use-package load-env-vars
   :hook ((clojure-mode . @-set-project-env)
@@ -107,8 +58,8 @@ common lisp-modes mode.
          (cider-mode   . @-set-project-env))
   :config
   (defvar @-dotenv-file-name ".env"
-  "The name of the .env file."
-  )
+    "The name of the .env file."
+    )
   (defun @-find-env-file ()
     "Find the closest .env file in the directory hierarchy."
 
@@ -117,34 +68,12 @@ common lisp-modes mode.
       (when (file-exists-p file-name)
         file-name)))
   (defun @-set-project-env ()
-  "Export all environment variables in the closest .env file."
+    "Export all environment variables in the closest .env file."
 
-  (let ((env-file (@-find-env-file)))
-    (when env-file
-      (load-env-vars env-file))))
+    (let ((env-file (@-find-env-file)))
+      (when env-file
+        (load-env-vars env-file))))
   )
-
-(use-package multiple-cursors
-  :ensure t
-  :bind
-  (("S-<mouse-1>" . mc/add-cursor-on-click)
-   :map region-bindings-mode-map
-   ("n" . mc/mark-next-symbol-like-this)
-   ("N" . mc/mark-next-like-this)
-   ("p" . mc/mark-previous-symbol-like-this)
-   ("P" . mc/mark-previous-like-this)
-   ("a" . mc/mark-all-symbols-like-this)
-   ("A" . mc/mark-all-like-this)
-   ("s" . mc/mark-all-in-region-regexp)
-   ("l" . mc/edit-ends-of-lines)))
-
-(use-package multiple-cursors-core
-  :straight nil
-  :bind
-  (( :map mc/keymap
-     ("<return>" . nil)
-     ("C-&" . mc/vertical-align-with-space)
-     ("C-#" . mc/insert-numbers))))
 
 (use-package paren
   :hook (prog-mode . show-paren-mode))
@@ -274,6 +203,104 @@ common lisp-modes mode.
           . region-bindings-off)))
 
 ;;; Languages
+;;treesitter
+
+(use-package treesit-auto
+  :straight (:host github :repo "renzmann/treesit-auto")
+  ;; TODO: M-x treesit-auto-install-all
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(use-package awk-ts-mode)
+
+(use-package combobulate
+  :straight t
+  :hook ((python-ts-mode
+          js-ts-mode
+          css-ts-mode
+          yaml-ts-mode
+          typescript-ts-mode
+          tsx-ts-mode) . combobulate-mode)
+  :custom
+  (combobulate-key-prefix "C-c o"))
+
+;;; LSP
+(use-package lsp-mode
+  :init
+  ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+  (setq lsp-keymap-prefix "C-c l")
+  :commands lsp
+  :hook ((go-mode . lsp)
+         (go-ts-mode . lsp)
+         (typescript-ts-mode . lsp)
+         (python-mode . lsp)
+         (python-ts-mode . lsp)
+         (tsx-ts-mode . lsp)
+         (web-mode . lsp)
+         (c-mode . lsp)
+         (c++-mode . lsp)
+         (c++-ts-mode . lsp)
+         ;; if you want which-key integration
+         (lsp-mode . lsp-enable-which-key-integration)
+         (lsp-mode . lsp-diagnostics-mode))
+  :custom
+  ;; (lsp-keymap-prefix "C-c l")
+  (lsp-auto-configure nil)
+  (lsp-diagnostics-provider :flymake)
+  (lsp-modeline-diagnostics-enable t)
+  (lsp-completion-provider :none)
+  (lsp-session-file (locate-user-emacs-file ".lsp-session"))
+  (lsp-log-io nil)
+  (lsp-keep-workspace-alive nil)
+  (lsp-idle-delay 0.5)
+  (lsp-enable-xref t)
+  (lsp-signature-doc-lines 1)
+  :init
+  (setq lsp-use-plists t))
+
+(use-package lsp-ui
+  :demand t
+  :commands lsp-ui-mode)
+
+(use-package lsp-completion
+  :straight nil
+  :no-require
+  :hook ((lsp-mode . lsp-completion-mode-maybe))
+  :commands (lsp-completion-mode)
+  :preface
+  (defun lsp-completion-mode-maybe ()
+    (unless (bound-and-true-p cider-mode)
+      (lsp-completion-mode 1))))
+
+(use-package lsp-treemacs
+  :defer t
+  :commands lsp-treemacs-errors-list
+  :custom
+  (lsp-treemacs-theme "Iconless"))
+
+(use-package lsp-clojure
+  :straight nil
+  :demand t
+  :no-require
+  :after lsp-mode
+  :hook (cider-mode . cider-toggle-lsp-completion-maybe)
+   :hook ((clojure-mode
+          clojurec-mode
+          clojurescript-mode)
+         . lsp)
+   :preface
+  (defun cider-toggle-lsp-completion-maybe ()
+    (lsp-completion-mode (if (bound-and-true-p cider-mode) -1 1)))
+  :config
+  (setq lsp-file-watch-threshold 10000
+        lsp-signature-auto-activate nil
+        ;; I use clj-kondo from master
+        lsp-diagnostics-provider :none
+        lsp-enable-indentation nil ;; uncomment to use cider indentation instead of lsp
+        ))
 
 (use-package cc-mode
   :hook (c-mode-common . cc-mode-setup)
@@ -360,7 +387,6 @@ common lisp-modes mode.
 
 (use-package yaml-mode
   :mode ("\\.yml\\'" . yaml-mode)
-  :ensure t
   :defer t
   :custom
   (yaml-indent-offset 2)
@@ -373,21 +399,6 @@ common lisp-modes mode.
   :defer t
   :custom
   (js-indent-level 2))
-
-;; (use-package typescript-mode
-;;   :after tree-sitter
-;;   :config
-;;   ;; we choose this instead of tsx-mode so that eglot can automatically figure out language for server
-;;   ;; see https://github.com/joaotavora/eglot/issues/624 and https://github.com/joaotavora/eglot#handling-quirky-servers
-;;   (define-derived-mode typescriptreact-mode typescript-mode
-;;     "TypeScript TSX")
-
-;;   ;; use our derived mode for tsx files
-;;   (add-to-list 'auto-mode-alist '("\\.tsx?\\'" . typescriptreact-mode))
-;;   ;; by default, typescript-mode is mapped to the treesitter typescript parser
-;;   ;; use our derived mode to map both .tsx AND .ts -> typescriptreact-mode -> treesitter tsx
-;;   (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
-
 
 (use-package lua-mode
   :ensure t
@@ -706,13 +717,12 @@ specific project."
     ;; if you want to use outline-minor-mode
     (outline-minor-mode 1)
     )
-
   (add-hook 'terraform-mode-hook 'my-terraform-mode-init))
 
 (use-package yasnippet
   :ensure t
   :defer t
-    :commands (yas-minor-mode-on
+  :commands (yas-minor-mode-on
              yas-expand
              yas-expand-snippet
              yas-lookup-snippet
@@ -724,20 +734,20 @@ specific project."
              yas--all-templates
              yas--get-snippet-tables
              yas--template-key)
-    :delight yas-minor-mode
-      :hook ((text-mode . yas-minor-mode-on)
+  :delight yas-minor-mode
+  :hook ((text-mode . yas-minor-mode-on)
          (prog-mode . yas-minor-mode-on)
          (conf-mode . yas-minor-mode-on)
          (snippet-mode . yas-minor-mode-on))
-      :config
+  :config
   (setq yas-prompt-functions (delq #'yas-dropdown-prompt
                                    yas-prompt-functions)
-  ;; yas-snippet-dirs '(file-templates-dir)
+        ;; yas-snippet-dirs '(file-templates-dir)
         ))
 
 (use-package yasnippet-classic-snippets
- :ensure t
- :demand t)
+  :ensure t
+  :demand t)
 
 (use-package consult-yasnippet
  :ensure t
@@ -750,155 +760,14 @@ specific project."
  :init
  (setq yasnippet-capf-lookup-by 'key) ;; key or name
  :config (add-to-list 'completion-at-point-functions #'yasnippet-capf))
-;;; LSP
-
-(use-package lsp-mode
-  :ensure t
-  :hook ((lsp-mode . lsp-diagnostics-mode))
-  :custom
-  (lsp-keymap-prefix "C-c l")
-  (lsp-auto-configure nil)
-  (lsp-diagnostics-provider :flymake)
-  (lsp-modeline-diagnostics-enable t)
-  (lsp-completion-provider :none)
-  (lsp-session-file (locate-user-emacs-file ".lsp-session"))
-  (lsp-log-io nil)
-  (lsp-keep-workspace-alive nil)
-  (lsp-idle-delay 0.5)
-  (lsp-enable-xref t)
-  (lsp-signature-doc-lines 1)
-  :init
-  (setq lsp-use-plists t))
-
-(use-package lsp-ui
-  :ensure t
-  :demand t
-  :commands lsp-ui-mode)
-
-(use-package lsp-completion
-  :straight nil
-  :no-require
-  :hook ((lsp-mode . lsp-completion-mode-maybe))
-  :commands (lsp-completion-mode)
-  :preface
-  (defun lsp-completion-mode-maybe ()
-    (unless (bound-and-true-p cider-mode)
-      (lsp-completion-mode 1))))
-
-(use-package lsp-treemacs
-  :ensure t
-  :defer t
-  :custom
-  (lsp-treemacs-theme "Iconless"))
-
-(use-package lsp-clojure
-  :straight nil
-  :demand t
-  :after lsp-mode
-  :hook (cider-mode . cider-toggle-lsp-completion-maybe)
-  :preface
-  (defun cider-toggle-lsp-completion-maybe ()
-    (lsp-completion-mode (if (bound-and-true-p cider-mode) -1 1)))
-  :config
-  (setq lsp-file-watch-threshold 10000
-        lsp-signature-auto-activate nil
-        ;; I use clj-kondo from master
-        lsp-diagnostics-provider :none
-        lsp-enable-indentation nil ;; uncomment to use cider indentation instead of lsp
-        ))
-
-(use-package lsp-clojure
-  :straight nil
-  :no-require
-  :hook ((clojure-mode
-          clojurec-mode
-          clojurescript-mode)
-         . lsp))
-
-;;treesitter
-
-;; (setq treesit-language-source-alist
-;;    '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-;;      (cmake "https://github.com/uyha/tree-sitter-cmake")
-;;      (css "https://github.com/tree-sitter/tree-sitter-css")
-;;      (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-;;      (go "https://github.com/tree-sitter/tree-sitter-go")
-;;      (html "https://github.com/tree-sitter/tree-sitter-html")
-;;      (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
-;;      (json "https://github.com/tree-sitter/tree-sitter-json")
-;;      (make "https://github.com/alemuller/tree-sitter-make")
-;;      (markdown "https://github.com/ikatyang/tree-sitter-markdown")
-;;      (python "https://github.com/tree-sitter/tree-sitter-python")
-;;      (toml "https://github.com/tree-sitter/tree-sitter-toml")
-;;      (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-;;      (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-;;      (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-
-;; install treesitter lnaguages
-;;(mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
 
 
-(use-package treesit
-  :straight nil
-  :preface
-  (defun mp-setup-install-grammars ()
-    "Install Tree-sitter grammars if they are absent."
-    (interactive)
-    (dolist (grammar
-             '((css "https://github.com/tree-sitter/tree-sitter-css")
-               (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
-               (python "https://github.com/tree-sitter/tree-sitter-python")
-               (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
-               (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-      (add-to-list 'treesit-language-source-alist grammar)
-      ;; Only install `grammar' if we don't already have it
-      ;; installed. However, if you want to *update* a grammar then
-      ;; this obviously prevents that from happening.
-      (unless (treesit-language-available-p (car grammar))
-        (treesit-install-language-grammar (car grammar)))))
-
-  ;; Optional, but recommended. Tree-sitter enabled major modes are
-  ;; distinct from their ordinary counterparts.
-  ;;
-  ;; You can remap major modes with `major-mode-remap-alist'. Note
-  ;; that this does *not* extend to hooks! Make sure you migrate them
-  ;; also
-  (dolist (mapping '((python-mode . python-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (typescript-mode . tsx-ts-mode)
-                     (json-mode . json-ts-mode)
-                     (js-mode . js-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (yaml-mode . yaml-ts-mode)))
-    (add-to-list 'major-mode-remap-alist mapping))
-
-  :config
-  (mp-setup-install-grammars)
-  ;; Do not forget to customize Combobulate to your liking:
-  ;;
-  ;;  M-x customize-group RET combobulate RET
-  ;;
-  (use-package combobulate
-     :straight (:host github :repo "mickeynp/combobulate")
-     :preface
-    ;; You can customize Combobulate's key prefix here.
-    ;; Note that you may have to restart Emacs for this to take effect!
-    (setq combobulate-key-prefix "C-c o")
-
-    ;; Optional, but recommended.
-    ;;
-    ;; You can manually enable Combobulate with `M-x
-    ;; combobulate-mode'.
-    :hook ((python-ts-mode . combobulate-mode)
-           (js-ts-mode . combobulate-mode)
-           (css-ts-mode . combobulate-mode)
-           (yaml-ts-mode . combobulate-mode)
-           (json-ts-mode . combobulate-mode)
-           (typescript-ts-mode . combobulate-mode)
-           (tsx-ts-mode . combobulate-mode))
-    ;; Amend this to the directory where you keep Combobulate's source
-    ;; code.
-    ;;:load-path ("path-to-git-checkout-of-combobulate")
-    ))
+;; This Emacs library provides a global mode which displays ugly form
+;; feed characters as tidy horizontal rules.
+;;
+;; I use ^L to break sections on lisp
+(use-package page-break-lines
+  :delight
+  :hook (emacs-lisp-mode . page-break-lines-mode))
 
 (provide 'coding)

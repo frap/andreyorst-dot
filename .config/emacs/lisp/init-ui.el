@@ -1,4 +1,185 @@
-;;; my-lisp/ui.el --- Emacs UI -*- lexical-binding: t -*-
+;;; my-lisp/init-ui.el --- Emacs UI -*- lexical-binding: t -*-
+(use-package defaults
+  :straight nil
+  :no-require
+  :preface
+  (setq-default
+   ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
+   idle-update-delay 1.0              ; default is 0.5.
+   indent-tabs-mode nil
+   load-prefer-newer t
+   truncate-lines t
+   bidi-paragraph-direction 'left-to-right
+   frame-title-format  '(buffer-file-name "Ɛmacs: %b (%f)" "Ɛmacs: %b") ; name of the file I am editing as the name of the window.
+   scroll-step 1                      ; scroll with less jump.
+   scroll-preserve-screen-position t
+   scroll-margin 3
+   scroll-conservatively 101
+   scroll-up-aggressively 0.01
+   scroll-down-aggressively 0.01
+   lazy-lock-defer-on-scrolling t     ; set this to make scolloing faster.
+   auto-window-vscroll nil            ; Lighten vertical scroll.
+   fast-but-imprecise-scrolling nil
+   mouse-wheel-scroll-amount '(1 ((shift) . 1))
+   mouse-wheel-progressive-speed nil
+   hscroll-step 1                     ; Horizontal Scroll.
+   frame-resize-pixelwise window-system
+   window-resize-pixelwise window-system)
+  (when (window-system)
+    (setq-default
+     x-gtk-use-system-tooltips nil
+     cursor-type 'box
+     cursor-in-non-selected-windows nil))
+  (setq
+   ring-bell-function 'ignore ;turn off the bell noise
+   mode-line-percent-position nil
+   enable-recursive-minibuffers t)
+  (when (version<= "27.1" emacs-version)
+    (setq bidi-inhibit-bpa t))
+  (provide 'defaults))
+
+;; (setq
+;;  debug-on-error init-file-debug     ; Reduce debug output, well, unless we've asked for it.
+;;  jka-compr-verbose init-file-debug
+;;  read-process-output-max (* 64 1024); 64kb
+
+
+;;  help-window-select t               ; select help window when opened
+;;  redisplay-skip-fontification-on-input t
+;;  tab-always-indent 'complete        ; smart tab behavior - indent or complete.
+;;  visible-bell t                     ; Flash the screen on error, don't beep.
+;;  view-read-only t					; Toggle ON or OFF with M-x view-mode (or use e to exit view-mode).
+;;  use-dialog-box nil                 ; Don't pop up UI dialogs when prompting.
+;;  echo-keystrokes 0.1                ; Show Keystrokes in Progress Instantly.
+;;  delete-auto-save-files t           ; deletes buffer's auto save file when it is saved or killed with no changes in it.
+;;  kill-whole-line t 			        ; kills the entire line plus the newline
+;;  save-place-forget-unreadable-files nil
+;;  blink-matching-paren t             ; Blinking parenthesis.
+;;  next-line-add-newlines nil         ; don't automatically add new line, when scroll down at the bottom of a buffer.
+;;  require-final-newline t            ; require final new line.
+;;  mouse-sel-retain-highlight t       ; keep mouse high-lighted.
+;;  highlight-nonselected-windows nil
+;;  transient-mark-mode t              ; highlight the stuff you are marking.
+;;  ffap-machine-p-known 'reject       ; Don't ping things that look like domain names.
+;;  pgtk-wait-for-event-timeout 0.001
+;;  display-line-numbers-type 'relative
+;;  speedbar-show-unknown-files t ; browse source tree with Speedbar file browser
+;;
+;;  )
+
+(use-package functions
+  :straight nil
+  :no-require
+  :preface
+  (require 'subr-x)
+  (defun split-pararagraph-into-lines ()
+    "Split the current paragraph into lines with one sentence each."
+    (interactive)
+    (save-excursion
+      (let ((fill-column most-positive-fixnum))
+        (fill-paragraph))
+      (let ((auto-fill-p auto-fill-function)
+            (end (progn (end-of-line) (backward-sentence) (point))))
+        (back-to-indentation)
+        (unless (= (point) end)
+          (auto-fill-mode -1)
+          (while (< (point) end)
+            (forward-sentence)
+            (delete-horizontal-space)
+            (newline-and-indent))
+          (deactivate-mark)
+          (when auto-fill-p
+            (auto-fill-mode t))
+          (when (looking-at "^$")
+            (delete-char -1))))))
+  (defun in-termux-p ()
+    "Detect if Emacs is running in Termux."
+    (executable-find "termux-info"))
+  (defun termux-color-theme-dark-p ()
+    (with-temp-buffer
+      (insert-file-contents
+       (expand-file-name "~/.termux/theme-variant"))
+      (looking-at-p "dark")))
+  (defun dark-mode-enabled-p ()
+    "Check if dark mode is enabled."
+    (cond ((in-termux-p)
+           (termux-color-theme-dark-p))
+          ((featurep 'dbus)
+           (dbus-color-theme-dark-p))
+          (t nil)))
+  (defun memoize (fn)
+    "Create a storage for FN's args.
+Checks if FN was called with set args before.  If so, return the
+value from the storage and don't call FN.  Otherwise calls FN,
+and saves its result in the storage.  FN must be referentially
+transparent."
+    (let ((memo (make-hash-table :test 'equal)))
+      (lambda (&rest args)
+        ;; `memo' is used as a singleton to check for absense of value
+        (let ((value (gethash args memo memo)))
+          (if (eq value memo)
+              (puthash args (apply fn args) memo)
+            value)))))
+  (defmacro defmemo (name &rest funtail)
+    (declare (doc-string 3) (indent 2) (debug defun))
+    `(defalias ',name (memoize (lambda ,@funtail))))
+  (defvar-local ssh-tunnel-port nil)
+  (put 'ssh-tunnel-port 'safe-local-variable #'numberp)
+  (defun ssh-tunnel (host port &optional local-port)
+    "Start an SSH tunnel from localhost to HOST:PORT.
+If LOCAL-PORT is nil, PORT is used as local port."
+    (interactive (list (read-string "host: " nil 'ssh-host-history)
+                       (read-number "port: " ssh-tunnel-port 'ssh-port-history)
+                       (when current-prefix-arg
+                         (read-number "local port: " ssh-tunnel-port 'ssh-port-history))))
+    (let ((name (if (and local-port (not (= local-port port)))
+                    (format "*ssh-tunnel:%s:%s:%s" local-port host port)
+                  (format "*ssh-tunnel:%s:%s" host port))))
+      (async-shell-command
+       (format "ssh -4 -N -L %s:localhost:%s %s" (or local-port port) port host)
+       (concat " " name))))
+  (provide 'functions))
+
+(use-package local-config
+  :straight nil
+  :no-require
+  :preface
+  (defgroup local-config ()
+    "Customisation group for local settings."
+    :prefix "local-config-"
+    :group 'emacs)
+  (defcustom local-config-dark-theme 'modus-vivendi
+    "Dark theme to use."
+    :tag "Dark theme"
+    :type 'symbol
+    :group 'local-config)
+  (defcustom local-config-light-theme 'modus-operandi
+    "Light theme to use."
+    :tag "Light theme"
+    :type 'symbol
+    :group 'local-config)
+  (defcustom no-hscroll-modes '(term-mode)
+    "Major modes to disable horizontal scrolling."
+    :tag "Modes to disable horizontal scrolling"
+    :type '(repeat symbol)
+    :group 'local-config)
+  (provide 'local-config))
+
+(use-package ace-window
+  :ensure t
+  :bind ("M-o" . ace-window)
+  :custom
+  (aw-scope 'frame)
+  (aw-minibuffer-flag t)
+  (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+  :config
+  (set-face-attribute
+   'aw-leading-char-face nil
+   ;; :foreground "deep sky blue"
+   :weight 'bold
+   :height 3.0)
+  (ace-window-display-mode 1))
+
 (use-package face-remap
   :hook (text-scale-mode . text-scale-adjust-latex-previews)
   :preface
@@ -292,7 +473,6 @@ applied to the name.")
   (provide 'mode-line))
 
 (use-package modus-themes
-  :ensure t
   :requires (local-config)
   :custom
   (modus-themes-org-blocks nil)
@@ -355,7 +535,6 @@ applied to the name.")
 
 ;; doom-modeline dropped all-the-icons support in favor of nerd-icons
 (use-package nerd-icons
-  :ensure t
   ;; :custom
   ;; The Nerd Font you want to use in GUI
   ;; "Symbols Nerd Font Mono" is the default and is recommended
@@ -400,7 +579,6 @@ applied to the name.")
 
 ;;;; ligature
 (use-package ligature
-  :ensure t
   :config
   ;; Enable the "www" ligature in every possible major mode
   (ligature-set-ligatures 't '("www"))
@@ -459,4 +637,66 @@ applied to the name.")
                                    `([,ligature-re 0 font-shape-gstring])))
            char/ligature-re)))
 
-(provide 'ui)
+
+;;________________________________________________________________
+;;;    Settings
+;;________________________________________________________________
+;; By default emacs will not delete selection text when typing on it, let's fix it
+;; (delete-selection-mode t)
+;; ;; find-file-at-point, smarter C-x C-f when point on path or URL
+;; (ffap-bindings)
+;; ;; Ask y or n instead of yes or no
+;; (defalias 'yes-or-no-p 'y-or-n-p)
+
+;; (mouse-avoidance-mode 'exile)
+;; ;; Font lock of special Dash variables (it, acc, etc.). Comes default with Emacs.
+;; (global-dash-fontify-mode)
+;; (when window-system (global-prettify-symbols-mode t))
+
+
+
+;; ;;;; General But Better Defaults
+;; (setq-default
+;;  ad-redefinition-action 'accept     ; Silence warnings for redefinition.
+;;  confirm-kill-emacs 'yes-or-no-p    ; Confirm before exiting Emacs.
+;;  cursor-in-non-selected-windows nil ; Hide the cursor in inactive windows.
+;;  speedbar t                         ; Quick file access with bar.
+;;  backup-by-copying t                ; don't clobber symlinks.
+;;  ;; backup-directory-alist `(("."~/.config/emacs/var/backup/per-session))
+;;  default-directory "~/"
+;;  custom-safe-themes t
+;;  load-prefer-newer t ; don't use the compiled code if its the older package.
+;;  make-backup-files t               ; backup of a file the first time it is saved.
+;;  delete-by-moving-to-trash t       ; move deleted files to trash.
+;;  delete-old-versions t             ; delete excess backup files silently.
+;;  kept-new-versions 6               ; newest versions to keep when a new numbered backup is made (default: 2).
+;;  kept-old-versions 2               ; oldest versions to keep when a new numbered backup is made (default: 2).
+;;  version-control t                 ; version numbers for backup files.
+;;  auto-save-default t               ; auto-save every buffer that visits a file.
+;;  auto-save-timeout 30              ; number of seconds idle time before auto-save (default: 30).
+;;  auto-save-interval 200            ; number of keystrokes between auto-saves (default: 300).
+;;  compilation-always-kill t         ; kill compilation process before starting another.
+;;  compilation-ask-about-save nil    ; save all buffers on `compile'.
+;;  compilation-scroll-output t
+;;  tab-width 4
+;;  indent-tabs-mode nil              ; set indentation with spaces instead of tabs with 4 spaces.
+;;  indent-line-function 'insert-tab
+;;  require-final-newline t
+;;  x-select-enable-clipboard t       ; Makes killing/yanking interact with the clipboard.
+;;  save-interprogram-paste-before-kill t ; Save clipboard strings into kill ring before replacing them.
+;;  apropos-do-all t                  ; Shows all options when running apropos.
+;;  mouse-yank-at-point t             ; Mouse yank commands yank at point instead of at click.
+;;  message-log-max 1000
+;;  fill-column 80
+;;  make-pointer-invisible t          ; hide cursor when writing.
+;;  column-number-mode t              ; show (line,column) in mode-line.
+;;  cua-selection-mode t              ; delete regions.
+;;  enable-recursive-minibuffers t    ; allow commands to be run on minibuffers.
+;;  dired-kill-when-opening-new-dired-buffer t   ; delete dired buffer when opening another directory
+;;  backward-delete-char-untabify-method 'hungry ; Alternatives is: 'all (remove all consecutive whitespace characters, even newlines).
+;;  )
+
+
+
+(provide 'init-ui)
+;;; init-ui.el ends here

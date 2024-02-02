@@ -1,4 +1,4 @@
-;;; my-lisp/org.el --- Emacs Org-mode -*- lexical-binding: t -*-
+;;; lisp/init-org.el --- Emacs Org-mode -*- lexical-binding: t -*-
 ;;; Org
 
 (use-package org
@@ -72,39 +72,68 @@
   (unless (version<= org-version "9.1.9")
     (add-to-list 'org-modules 'org-tempo)))
 
-;;(use-package ob-shell
-;;:ensure t
-;;:after org)
+;; (use-package ob-shell
+;; :after org)
 
-(use-package org-capture
-  :straight nil
-  :defer t
-  ;; :after blog
-  :bind ("C-c o c" . org-capture)
-  ;;:custom
-  ;;(org-directory blog-directory)
-  ;; (org-capture-templates
-  ;;  `(,blog-capture-template
-  ;;    ,@(mapcar
-  ;;       (lambda (spec)
-  ;;         (seq-let (btn descr heading) spec
-  ;;           `( ,btn ,descr entry
-  ;;              (file+headline ,(expand-file-name "kb/index.org" blog-directory) ,heading)
-  ;;              "* [[blog-html:%^{Link}][%^{Description}]]\n:properties:\n:blog-collapsable: t\n:end:"
-  ;;              :immediate-finish t
-  ;;              :before-finalize (org-hugo-export-to-md))))
-  ;;       '(("a" "Article" "Articles")
-  ;;         ("t" "Talk" "Talks")
-  ;;         ("w" "Web page" "Various Web pages")
-  ;;         ("b" "Books, courses" "Books, Courses")))))
-  )
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
+  :hook (org-agenda-finalize . org-modern-agenda)
+  :custom-face
+  ;; Force monospaced font for tags
+  (org-modern-tag ((t (:inherit org-verbatim :weight regular :foreground "black" :background "LightGray" :box "black"))))
+  :custom
+  ;; (org-modern-star '("◉" "○" "◈" "◇" "✳" "◆" "✸" "▶"))
+  (org-modern-table-vertical 5)
+  (org-modern-table-horizontal 2)
+  (org-modern-list '((?+ . "➤") (?- . "–") (?* . "•")))
+  (org-modern-block-fringe nil)
+  (org-modern-checkbox nil) ;; Not that interesting! Maybe it depends on the used font
+  (org-modern-todo-faces
+   ;; Tweak colors, and force it to be monospaced, useful when using `mixed-pitch-mode'.
+   '(("IDEA" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "goldenrod"))
+     ("NEXT" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "IndianRed1"))
+     ("STRT" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "OrangeRed"))
+     ("WAIT" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "coral"))
+     ("KILL" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "DarkGreen"))
+     ("PROJ" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "LimeGreen"))
+     ("HOLD" . (:inherit org-verbatim :weight semi-bold :foreground "white" :background "orange"))
+     ("DONE" . (:inherit org-verbatim :weight semi-bold :foreground "black" :background "LightGray")))))
+
+;; For latex fragments
+(use-package org-fragtog
+  :straight t
+  :hook (org-mode . org-fragtog-mode)
+  :custom
+  (org-fragtog-preview-delay 0.2))
 
 (use-package visual-fill-column
   :ensure t
   :config
   ;; Configure fill width
-  (setq visual-fill-column-width 110
+  (setq visual-fill-column-width 120
         visual-fill-column-center-text t))
+
+(use-package epresent
+  :ensure t
+  :custom
+  (epresent-text-scale 200)
+  (epresent-format-latex-scale 2)
+  :hook
+  (epresent-start-presentation . epresent-setup)
+  :preface
+  (defun epresent-setup ()
+    (interactive)
+    (visual-line-mode 1)
+    (flyspell-mode -1)
+    (set-window-fringes (selected-window) 600 600)
+    (set-face-attribute
+     'org-block (selected-frame)
+     :background (modus-themes-get-color-value 'bg-dim))
+    (set-face-attribute
+     'header-line (selected-frame)
+     :height 1200
+     :background 'unspecified)
+    (setq-local header-line-format " ")))
 
 (use-package org-present
   :ensure t
@@ -159,8 +188,7 @@
   ;; Register hooks with org-present
   (add-hook 'org-present-mode-hook 'my/org-present-start)
   (add-hook 'org-present-mode-quit-hook 'my/org-present-end)
-  (add-hook 'org-present-after-navigate-functions 'my/org-present-prepare-slide)
-  )
+  (add-hook 'org-present-after-navigate-functions 'my/org-present-prepare-slide))
 
 ;; (use-package org-tree-slide
 ;;   :ensure t
@@ -184,4 +212,4 @@
 ;;   :ensure t
 ;;   :after ox)
 
-(provide 'my-org)
+(provide 'init-org)

@@ -1,10 +1,17 @@
-;;; my-lisp/editor.el --- Emacs as an Editor -*- lexical-binding: t -*-
+;;; lisp/init-text.el --- Emacs wit Editor -*- lexical-binding: t -*-
 
 (use-package autorevert
   :hook (after-init . global-auto-revert-mode))
 
-(use-package delsel
-  :hook (after-init . delete-selection-mode))
+;; DWIM case
+;; These do-what-I-mean bindings are newer than the classic
+;; keybindings, but a better default.
+(use-package emacs
+  :bind
+  ([remap capitalize-word] . capitalize-dwim)
+  ([remap downcase-word] . downcase-dwim)
+  ([remap upcase-word] . upcase-dwim))
+
 
 (use-package display-line-numbers
   :hook (display-line-numbers-mode . toggle-hl-line)
@@ -17,7 +24,6 @@
     (hl-line-mode (if display-line-numbers-mode 1 -1))))
 
 (use-package expand-region
-  :ensure t
   :bind ("C-=" . er/expand-region))
 
 (use-package formfeed
@@ -41,16 +47,26 @@
   (provide 'formfeed))
 
 (use-package flyspell
-  :ensure t
   :when (or (executable-find "ispell")
             (executable-find "aspell")
             (executable-find "hunspell"))
   :hook ((org-mode git-commit-mode markdown-mode) . flyspell-mode))
 
+; Jinx is a just-in-time spell checker.
+(use-package jinx
+  :ensure t
+  :diminish
+  ;; I don't want it anywhere except I really want.
+  ;; :hook (on-first-buffer . global-jinx-mode)
+  :bind
+  ([remap ispell-word] . jinx-correct)
+  :bind
+  (:map ltl/toggles-map
+   ("$" . jinx-mode)))
+
 
 ;; (electric-indent-mode nil)  ; Auto indentation.
-(global-subword-mode 1)     ; Iterate through CamelCase words.
-;; ────────────────────────────────── ibuffer ──────────────────────────────────
+
 ;; Use human readable Size column instead of original one
 (eval-after-load 'ibuffer
   '(progn
@@ -93,7 +109,8 @@
                ("mu4e" (name . "\*mu4e\*"))
                ("coding" (or
                                (mode . python-mode)
-                               (mode . clojure-mode)))
+                               (mode . clojure-mode)
+                               (name . "^\\*scratch-clj\\*$")))
                ("emacs" (or
                          (name . "^\\*scratch\\*$")
                          (name . "^\\*Messages\\*$")))
@@ -246,28 +263,6 @@ disabled, or enabled and the mark is active."
   (add-hook 'kill-buffer-query-functions #'+scratch-immortal))
 
 
-;; ;;;; undo-tree
-;; ;; Allow tree-semantics for undo operations.
-;; (use-package undo-tree
-;;   :ensure t
-;;   :delight
-;;   :bind ("C-x u" . undo-tree-visualize)
-;;   :hook (org-mode . undo-tree-mode) ;; For some reason, I need this. FIXME.
-;;   :init (global-undo-tree-mode)
-;;   :custom
-;;   ;; Show a diff window displaying changes between undo nodes.
-;;   (undo-tree-visualizer-diff t)
-;;   ;; Prevent undo tree files from polluting your git repo
-;;   (undo-tree-history-directory-alist '(("." . "~/.config/emacs/var/undo-tree-hist")))
-;;   ;; Each node in the undo tree should have a timestamp.
-;;   (undo-tree-visualizer-timestamps t))
-
-(use-package vundo
-  :ensure t
-  :bind (("C-c u" . vundo))
-  :custom
-  (vundo-roll-back-on-quit nil)
-  (vundo--window-max-height 20))
 
 ;;;; Encoding
 ;; default to utf-8 for all the things
@@ -287,4 +282,4 @@ disabled, or enabled and the mark is active."
 (set-buffer-file-coding-system 'utf-8-unix)
 (setq default-process-coding-system '(utf-8-unix . utf-8-unix))
 
-(provide 'editor)
+(provide 'init-text)

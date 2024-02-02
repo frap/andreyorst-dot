@@ -1,4 +1,4 @@
-;;; my-lisp/tools.el --- Emacs Tools -*- lexical-binding: t -*-
+;;; lisp/init-tools.el --- Emacs Tools -*- lexical-binding: t -*-
 
 ;;; Tools
 
@@ -19,7 +19,6 @@
   (advice-add 'ediff-window-display-p :override #'ignore))
 
 (use-package eat
-  :ensure t
   :hook (eshell-load . eat-eshell-mode))
 
 ;; (use-package esh-mode
@@ -70,7 +69,6 @@
 
 
 (use-package project
-  :ensure t
   :bind ( :map project-prefix-map
           ("s" . project-save-some-buffers))
   :custom
@@ -168,7 +166,8 @@ means save all with no questions."
 (use-package magit
   :ensure t
   :defer t
-  :bind ("C-c g" . magit-status)
+  :bind
+  ("C-x g" . magit-status)
   :defines (magit-status-mode-map
             magit-revision-show-gravatars
             magit-display-buffer-function
@@ -185,7 +184,8 @@ means save all with no questions."
   (magit-ediff-dwim-show-on-hunks t)
   (magit-diff-refine-ignore-whitespace t)
   (magit-diff-refine-hunk 'all)
-  :config
+  (magit-no-message (list "Turning on magit-auto-revert-mode..."))
+   :config
   (setq-default vc-follow-symlinks t)
   ;; properly kill leftover magit buffers on quit
   (define-key magit-status-mode-map
@@ -260,6 +260,19 @@ means save all with no questions."
       [0 0 0 0 0 0 0 0 0 0 0 0 0 128 192 224 240 248]
       nil nil 'center)))
 
+;; show todos
+(use-package magit-todos
+  :after magit
+  :config (magit-todos-mode 1))
+
+;; Git-Link
+;; git-link grabs links to lines, regions, commits, or home pages.
+(use-package git-link
+  :custom
+  (git-link-use-commit t)
+  (git-link-use-single-line-number t)
+  :commands (git-link git-link-commit git-link-homepage))
+
 ;;;;; git-time
 (use-package git-timemachine
   :ensure t)
@@ -291,22 +304,22 @@ means save all with no questions."
      (substitute-command-keys
       "Edit, then exit with `\\[separedit-commit]' or abort with \\<edit-indirect-mode-map>`\\[edit-indirect-abort]'"))))
 
-(use-package recentf
-  :straight nil
-  :hook (after-init . recentf-mode)
-  :defines (recentf-exclude)
-  :custom
-  (recentf-max-menu-items 100)
-  (recentf-max-saved-items 100)
-  :config
-  (add-to-list 'recentf-exclude "\\.gpg\\")
-  (dolist (dir (list (locate-user-emacs-file ".cache/")
-                     (locate-user-emacs-file "workspace/.cache/")))
-    (add-to-list 'recentf-exclude (concat (regexp-quote dir) ".*"))))
-
 (use-package hl-todo
-  :ensure t
-  :hook (prog-mode . hl-todo-mode))
+  :straight (:host github :repo "tarsius/hl-todo")
+  :hook (prog-mode . hl-todo-mode)
+  :config
+  (setq hl-todo-keyword-faces
+        (append
+         hl-todo-keyword-faces
+         '(("BUG"   . "#ee5555")
+           ("FIX"   . "#0fa050")
+           ("PROJ"  . "#447f44")
+           ("IDEA"  . "#0fa050")
+           ("INFO"  . "#0e9030")
+           ("TWEAK" . "#fe9030")
+           ("PERF"  . "#e09030")))))
+
+(use-package dumb-jump)
 
 (use-package compile
   :straight nil
@@ -536,4 +549,4 @@ dependency artifact based on the project's dependencies."
 :]+\\):\\([[:digit:]]+\\):[[:space:]]+in.+$\\)"
    :file 1 :line 2))
 
-(provide 'tools)
+(provide 'init-tools)
