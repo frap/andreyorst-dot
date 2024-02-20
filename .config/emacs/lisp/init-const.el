@@ -21,5 +21,12 @@
   (>= emacs-major-version 30)
   "Emacs is 30 or above.")
 
+(setq
+ ;; Reduce debug output, well, unless we've asked for it.
+ debug-on-error init-file-debug     
+ jka-compr-verbose init-file-debug
+ read-process-output-max (* 64 1024) ; 64kb
+)
+
 (provide 'init-const)
 ;;; init-const.el ends here

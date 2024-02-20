@@ -27,6 +27,21 @@
              ns-right-option-modifier 'nil
              ns-right-command-modifier 'nil)))
 
+;;The most useful Emacs command is ~execute-extended-command~. It should be painless to access from the home row. (~bind-key*~ ensures that this setting is propagated through all major modes, which saves us a bunch of ~unbind-key~ calls in ~use-package~ stanzas.)
+(bind-key* "C-c ;" #'execute-extended-command)
+(bind-key* "C-c 4" #'execute-extended-command) ;; for a purely left-handed combo
+(bind-key* "C-c C-;" #'execute-extended-command-for-buffer)
+
+;; In Emacs for history reasons C-i is the same key as TAB. This is a problem inherited from terminal emulators. Using GUI we can do better
+;; Fix TAB and C-i (only in GUI)
+;; (defun setup-input (&rest _)
+;;   (when (display-graphic-p)
+;;     (general-def input-decode-map [(control ?i)] [control-i])
+;;     (general-def input-decode-map [(control ?I)] [(shift control-i)])))
+
+;; ;; If it's a daemon instance run setup-input each new frame
+;; (add-hook 'server-after-make-frame-hook 'setup-input)
+;; (add-hook 'after-init-hook 'setup-input)
 
 ;; use-package is built-in as of Emacs 29, but since we use :bind, we
 ;; need to load bind-key. If we forget, we get the error: Symbol's
@@ -54,28 +69,17 @@
   (dolist (key (where-is-internal fn nil))
     (unbind-key key)))
 
-;; avy is a GNU Emacs package for jumping to visible text using a
-;; char-based decision tree
-(use-package avy
-  :bind
-  (("C-'" . 'avy-goto-char)
-   ("C-:" . 'avy-goto-char-2)
-   ;; ("M-" . 'avy-copy-line)
-   ;; ("M-" . 'avy-copy-region)
-   ;; ("C-c C-j" . 'avy-resume)
-   (:map gas/goto
-         ("c" . #'avy-goto-char)
-         ("j" . #'avy-goto-word-0)
-         ("e" . #'avy-goto-word-0)
-         ("w" . #'avy-goto-word-1)
-         ("l" . #'avy-goto-line)
-         ("r" . 'avy-move-region)))
-
-  :config
-   (setq avy-ignored-modes '(image-mode doc-view-mode pdf-view-mode exwm-mode))
-   :custom
-   (avy-timeout-seconds 0.5)
-   (avy-style 'pre))
+ (use-package region-bindings
+   :straight
+   (:host gitlab :repo "andreyorst/region-bindings.el")
+   ;;  :vc (:url "https://gitlab.com/andreyorst/region-bindings.el.git")
+   :commands (region-bindings-mode)
+   :preface
+   (defun region-bindings-off ()
+     (region-bindings-mode -1))
+   :hook ((after-init . global-region-bindings-mode)
+          ((elfeed-search-mode magit-mode mu4e-headers-mode)
+           . region-bindings-off)))
 
 (use-package kmacro
   :defer t
@@ -103,10 +107,10 @@
   (setq which-key-idle-secondary-delay 0.1)
   (which-key-setup-side-window-bottom)
   (setq which-key-replacement-alist
-        '((("left") . ("🡸"))
-          (("right") . ("🡺"))
-          (("up") . ("🡹"))
-          (("down") . ("🡻"))
+        '((("left") . ("⬅️"))
+          (("right") . ("➡️"))
+          (("up") . ("⬆️"))
+          (("down") . ("⬇️"))
           (("delete") . ("DEL"))
           (("\\`DEL\\'") . ("BKSP"))
           (("RET") . ("⏎"))
@@ -510,8 +514,8 @@ point reaches the beginning or end of the buffer, stop there."
 (global-set-key (kbd "C-S-o") "\C-a\C-o")
 (global-set-key (kbd "<S-return>") "\C-e\C-m")
 (bind-key "C-c T"             'switch-theme)
-(bind-key "C-c t"             'toggle-transparency)
-(bind-key "C-c ;"             'comment-pretty)
+;;(bind-key "C-c t"             'toggle-transparency)
+;;(bind-key "C-c ;"             'comment-pretty)
 (bind-key "C-a"               'smarter-move-beginning-of-line)
 (bind-key "C-<f1>"            'global-display-line-numbers-mode)
 

@@ -1,28 +1,27 @@
 ;;; my-lisp/init-ui.el --- Emacs UI -*- lexical-binding: t -*-
-(use-package defaults
+(use-package ui-defaults
   :straight nil
   :no-require
+  :custom
+  (inhibit-splash-screen t)
   :preface
   (setq-default
    ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
    idle-update-delay 1.0              ; default is 0.5.
+
    indent-tabs-mode nil
    load-prefer-newer t
    truncate-lines t
    bidi-paragraph-direction 'left-to-right
    frame-title-format  '(buffer-file-name "Ɛmacs: %b (%f)" "Ɛmacs: %b") ; name of the file I am editing as the name of the window.
-   scroll-step 1                      ; scroll with less jump.
-   scroll-preserve-screen-position t
-   scroll-margin 3
-   scroll-conservatively 101
-   scroll-up-aggressively 0.01
-   scroll-down-aggressively 0.01
-   lazy-lock-defer-on-scrolling t     ; set this to make scolloing faster.
-   auto-window-vscroll nil            ; Lighten vertical scroll.
-   fast-but-imprecise-scrolling nil
-   mouse-wheel-scroll-amount '(1 ((shift) . 1))
-   mouse-wheel-progressive-speed nil
-   hscroll-step 1                     ; Horizontal Scroll.
+
+   mouse-yank-at-point t             ; Mouse yank commands yank at point instead of at click.
+   make-pointer-invisible t          ; hide cursor when writing.
+
+   ad-redefinition-action 'accept     ; Silence warnings for redefinition.
+   confirm-kill-emacs 'yes-or-no-p    ; Confirm before exiting Emacs.
+   cursor-in-non-selected-windows nil ; Hide the cursor in inactive windows.
+   speedbar t                         ; Quick file access with bar.
    frame-resize-pixelwise window-system
    window-resize-pixelwise window-system)
   (when (window-system)
@@ -31,41 +30,59 @@
      cursor-type 'box
      cursor-in-non-selected-windows nil))
   (setq
-   ring-bell-function 'ignore ;turn off the bell noise
+   ;; No need to see GNU agitprop.
+   inhibit-startup-screen t
+   ;; Never ding at me, ever.
+   ring-bell-function 'ignore
+   ;; eke out a little more scrolling performance
+   fast-but-imprecise-scrolling t
+   ;; keep the point in the same place while scrolling
+   scroll-preserve-screen-position t
+   ;; if native-comp is having trouble, there's not very much I can do
+   native-comp-async-report-warnings-errors 'silent
+   ;; I want to close these fast, so switch to it so I can just hit 'q'
+   help-window-select t
+   highlight-nonselected-windows nil
+   ;; highlight error messages more aggressively
+   next-error-message-highlight t
+   ;; accept 'y' or 'n' instead of yes/no
+   ;; the documentation advises against setting this variable
+   ;; the documentation can get bent imo
+   use-short-answers t
+
+
+   display-line-numbers-type 'relative
+   speedbar-show-unknown-files t ; browse source tree with Speedbar file browser
    mode-line-percent-position nil
    enable-recursive-minibuffers t)
   (when (version<= "27.1" emacs-version)
     (setq bidi-inhibit-bpa t))
-  (provide 'defaults))
+  (provide 'defaults)
 
-;; (setq
-;;  debug-on-error init-file-debug     ; Reduce debug output, well, unless we've asked for it.
-;;  jka-compr-verbose init-file-debug
-;;  read-process-output-max (* 64 1024); 64kb
+  :config
+  (setq initial-major-mode #'emacs-lisp-mode)
+  (setq initial-scratch-message
+        ";; ABANDONNEZ TOUT ESPOIR VOUS QUI ENTREZ ICI\n\n" )
+  (defun +scratch-immortal ()
+    "Bury, don't kill \"*scratch*\" buffer.
+          For `kill-buffer-query-functions'."
+    (if (eq (current-buffer) (get-buffer "*scratch*"))
+        (progn (bury-buffer)
+               nil)
+      t))
+  (defun +scratch-buffer-setup ()
+    "Add comment to `scratch' buffer and name it accordingly."
+    (let* ((mode (format "%s" major-mode))
+           (string (concat "Scratch buffer for:" mode "\n\n")))
+      (when scratch-buffer
+        (save-excursion
+          (insert string)
+          (goto-char (point-min))
+          (comment-region (point-at-bol) (point-at-eol)))
+        (next-line 2))
+      (rename-buffer (concat "*scratch<" mode ">*") t)))
+  (add-hook 'kill-buffer-query-functions #'+scratch-immortal))
 
-
-;;  help-window-select t               ; select help window when opened
-;;  redisplay-skip-fontification-on-input t
-;;  tab-always-indent 'complete        ; smart tab behavior - indent or complete.
-;;  visible-bell t                     ; Flash the screen on error, don't beep.
-;;  view-read-only t					; Toggle ON or OFF with M-x view-mode (or use e to exit view-mode).
-;;  use-dialog-box nil                 ; Don't pop up UI dialogs when prompting.
-;;  echo-keystrokes 0.1                ; Show Keystrokes in Progress Instantly.
-;;  delete-auto-save-files t           ; deletes buffer's auto save file when it is saved or killed with no changes in it.
-;;  kill-whole-line t 			        ; kills the entire line plus the newline
-;;  save-place-forget-unreadable-files nil
-;;  blink-matching-paren t             ; Blinking parenthesis.
-;;  next-line-add-newlines nil         ; don't automatically add new line, when scroll down at the bottom of a buffer.
-;;  require-final-newline t            ; require final new line.
-;;  mouse-sel-retain-highlight t       ; keep mouse high-lighted.
-;;  highlight-nonselected-windows nil
-;;  transient-mark-mode t              ; highlight the stuff you are marking.
-;;  ffap-machine-p-known 'reject       ; Don't ping things that look like domain names.
-;;  pgtk-wait-for-event-timeout 0.001
-;;  display-line-numbers-type 'relative
-;;  speedbar-show-unknown-files t ; browse source tree with Speedbar file browser
-;;
-;;  )
 
 (use-package functions
   :straight nil
@@ -92,21 +109,6 @@
             (auto-fill-mode t))
           (when (looking-at "^$")
             (delete-char -1))))))
-  (defun in-termux-p ()
-    "Detect if Emacs is running in Termux."
-    (executable-find "termux-info"))
-  (defun termux-color-theme-dark-p ()
-    (with-temp-buffer
-      (insert-file-contents
-       (expand-file-name "~/.termux/theme-variant"))
-      (looking-at-p "dark")))
-  (defun dark-mode-enabled-p ()
-    "Check if dark mode is enabled."
-    (cond ((in-termux-p)
-           (termux-color-theme-dark-p))
-          ((featurep 'dbus)
-           (dbus-color-theme-dark-p))
-          (t nil)))
   (defun memoize (fn)
     "Create a storage for FN's args.
 Checks if FN was called with set args before.  If so, return the
@@ -165,6 +167,7 @@ If LOCAL-PORT is nil, PORT is used as local port."
     :group 'local-config)
   (provide 'local-config))
 
+;; window selection with ace-window
 (use-package ace-window
   :ensure t
   :bind ("M-o" . ace-window)
@@ -179,6 +182,8 @@ If LOCAL-PORT is nil, PORT is used as local port."
    :weight 'bold
    :height 3.0)
   (ace-window-display-mode 1))
+
+(winner-mode +1)
 
 (use-package face-remap
   :hook (text-scale-mode . text-scale-adjust-latex-previews)
@@ -278,8 +283,8 @@ If LOCAL-PORT is nil, PORT is used as local port."
 (use-package frame
   :straight nil
   :requires seq
-  :bind (("C-z" . ignore)
-         ("C-x C-z" . ignore))
+  :bind (:map gas/toggles-map
+              ("t" . toggle-transparency))
   :config
   (set-frame-parameter (selected-frame) 'alpha '(85 . 50))
   (add-to-list 'default-frame-alist '(alpha . (85 . 50)))
@@ -326,151 +331,92 @@ If LOCAL-PORT is nil, PORT is used as local port."
   :config
   (menu-bar-mode -1))
 
-(use-package mouse
-  :straight nil
-  :bind (("<mode-line> <mouse-2>" . nil)
-         ("<mode-line> <mouse-3>" . nil)))
+;; (use-package mouse
+;;   :straight nil
+;;   :bind (("<mode-line> <mouse-2>" . nil)
+;;          ("<mode-line> <mouse-3>" . nil)))
 
-(use-package mwheel
-  :straight nil
-  :bind (("S-<down-mouse-1>" . nil)
-         ("S-<mouse-3>" . nil)
-         ("<mouse-4>" . mwheel-scroll)
-         ("<mouse-5>" . mwheel-scroll))
-  :custom
-  (mouse-wheel-flip-direction (not (featurep 'pgtk)))
-  (mouse-wheel-tilt-scroll t)
-  (mouse-wheel-progressive-speed nil)
-  :preface
-  (defun truncated-lines-p ()
-    "Non-nil if any line is longer than `window-width' + `window-hscroll'.
+;; (use-package mwheel
+;;   :straight nil
+;;   :bind (("S-<down-mouse-1>" . nil)
+;;          ("S-<mouse-3>" . nil)
+;;          ("<mouse-4>" . mwheel-scroll)
+;;          ("<mouse-5>" . mwheel-scroll))
+;;   :custom
+;;   (mouse-wheel-flip-direction (not (featurep 'pgtk)))
+;;   (mouse-wheel-tilt-scroll t)
+;;   (mouse-wheel-progressive-speed nil)
+;;   :preface
+;;   (defun truncated-lines-p ()
+;;     "Non-nil if any line is longer than `window-width' + `window-hscroll'.
 
-Returns t if any line exceeds the right border of the window.
-Used for stopping scroll from going beyond the longest line.
-Based on `so-long-detected-long-line-p'."
-    (let ((buffer (current-buffer))
-          (tabwidth tab-width))
-      (or (> (buffer-size buffer) 1000000) ; avoid searching in huge buffers
-          (with-temp-buffer
-            (insert-buffer-substring buffer)
-            (setq-local tab-width tabwidth)
-            (untabify (point-min) (point-max))
-            (goto-char (point-min))
-            (let* ((window-width
-                    ;; this computes a more accurate width rather than `window-width', and respects
-                    ;; `text-scale-mode' font width.
-                    (/ (window-body-width nil t) (window-font-width)))
-                   (hscroll-offset
-                    ;; `window-hscroll' returns columns that are not affected by
-                    ;; `text-scale-mode'.  Because of that, we have to recompute the correct
-                    ;; `window-hscroll' by multiplying it with a non-scaled value and
-                    ;; dividing it with a scaled width value, rounding it to the upper
-                    ;; boundary.  Since there's no way to get unscaled value, we have to get
-                    ;; a width of a face that is not scaled by `text-scale-mode', such as
-                    ;; `window-divider' face.
-                    (ceiling (/ (* (window-hscroll) (window-font-width nil 'window-divider))
-                                (float (window-font-width)))))
-                   (line-number-width
-                    ;; compensate line numbers width
-                    (if (bound-and-true-p display-line-numbers-mode)
-                        (- display-line-numbers-width)
-                      0))
-                   (threshold (+ window-width hscroll-offset line-number-width
-                                 -2))) ; compensate imprecise calculations
-              (catch 'excessive
-                (while (not (eobp))
-                  (let ((start (point)))
-                    (save-restriction
-                      (narrow-to-region start (min (+ start 1 threshold)
-                                                   (point-max)))
-                      (forward-line 1))
-                    (unless (or (bolp)
-                                (and (eobp) (<= (- (point) start)
-                                                threshold)))
-                      (throw 'excessive t))))))))))
-  (define-advice scroll-left (:before-while (&rest _) prevent-overscroll)
-    (and truncate-lines
-         (not (memq major-mode no-hscroll-modes))
-         (truncated-lines-p)))
+;; Returns t if any line exceeds the right border of the window.
+;; Used for stopping scroll from going beyond the longest line.
+;; Based on `so-long-detected-long-line-p'."
+;;     (let ((buffer (current-buffer))
+;;           (tabwidth tab-width))
+;;       (or (> (buffer-size buffer) 1000000) ; avoid searching in huge buffers
+;;           (with-temp-buffer
+;;             (insert-buffer-substring buffer)
+;;             (setq-local tab-width tabwidth)
+;;             (untabify (point-min) (point-max))
+;;             (goto-char (point-min))
+;;             (let* ((window-width
+;;                     ;; this computes a more accurate width rather than `window-width', and respects
+;;                     ;; `text-scale-mode' font width.
+;;                     (/ (window-body-width nil t) (window-font-width)))
+;;                    (hscroll-offset
+;;                     ;; `window-hscroll' returns columns that are not affected by
+;;                     ;; `text-scale-mode'.  Because of that, we have to recompute the correct
+;;                     ;; `window-hscroll' by multiplying it with a non-scaled value and
+;;                     ;; dividing it with a scaled width value, rounding it to the upper
+;;                     ;; boundary.  Since there's no way to get unscaled value, we have to get
+;;                     ;; a width of a face that is not scaled by `text-scale-mode', such as
+;;                     ;; `window-divider' face.
+;;                     (ceiling (/ (* (window-hscroll) (window-font-width nil 'window-divider))
+;;                                 (float (window-font-width)))))
+;;                    (line-number-width
+;;                     ;; compensate line numbers width
+;;                     (if (bound-and-true-p display-line-numbers-mode)
+;;                         (- display-line-numbers-width)
+;;                       0))
+;;                    (threshold (+ window-width hscroll-offset line-number-width
+;;                                  -2))) ; compensate imprecise calculations
+;;               (catch 'excessive
+;;                 (while (not (eobp))
+;;                   (let ((start (point)))
+;;                     (save-restriction
+;;                       (narrow-to-region start (min (+ start 1 threshold)
+;;                                                    (point-max)))
+;;                       (forward-line 1))
+;;                     (unless (or (bolp)
+;;                                 (and (eobp) (<= (- (point) start)
+;;                                                 threshold)))
+;;                       (throw 'excessive t))))))))))
+;;   (define-advice scroll-left (:before-while (&rest _) prevent-overscroll)
+;;     (and truncate-lines
+;;          (not (memq major-mode no-hscroll-modes))
+;;          (truncated-lines-p)))
+;;   :init
+;;   (if (fboundp #'context-menu-mode)
+;;       (context-menu-mode 1)
+;;     (global-set-key (kbd "<mouse-3>") menu-bar-edit-menu))
+;;   (unless (display-graphic-p)
+;;     (xterm-mouse-mode t)))
+
+(use-package doom-modeline
   :init
-  (if (fboundp #'context-menu-mode)
-      (context-menu-mode 1)
-    (global-set-key (kbd "<mouse-3>") menu-bar-edit-menu))
-  (unless (display-graphic-p)
-    (xterm-mouse-mode t)))
-
-(use-package mode-line
-  :straight nil
-  :no-require
-  :preface
-  (defvar mode-line-interactive-position
-    `(line-number-mode
-      (:propertize " %l:%C"
-                   help-echo "mouse-1: Goto line"
-                   mouse-face mode-line-highlight
-                   local-map ,(let ((map (make-sparse-keymap)))
-                                (define-key map [mode-line down-mouse-1] 'goto-line)
-                                map)))
-    "Mode line position with goto line binding.")
-  (put 'mode-line-interactive-position 'risky-local-variable t)
-  (fset 'abbreviate-file-name-memo (memoize #'abbreviate-file-name))
-  (defvar mode-line-buffer-file-name
-    '(:eval (propertize (if-let ((name (buffer-file-name)))
-                            (abbreviate-file-name-memo name)
-                          (buffer-name))
-                        'help-echo (buffer-name)
-                        'face (when (and (buffer-file-name) (buffer-modified-p))
-                                'font-lock-builtin-face)))
-    "Show file name if buffer is visiting a file, otherwise show
-buffer name.  If file is modified, a `font-lock-builtin-face' is
-applied to the name.")
-  (put 'mode-line-buffer-file-name 'risky-local-variable t)
-  (defvar mode-line-input-method
-    '(:eval (when current-input-method-title
-              (propertize (concat " " current-input-method-title)
-                          'help-echo (concat "Input method: " current-input-method))))
-    "Display input method name in the modeline.")
-  (put 'mode-line-input-method 'risky-local-variable t)
-  (defvar mode-line-buffer-encoding
-    '(:eval (propertize
-             (let ((sys (coding-system-plist buffer-file-coding-system)))
-               (concat " " (if (memq (plist-get sys :category)
-                                     '(coding-category-undecided coding-category-utf-8))
-                               "UTF-8"
-                             (upcase (symbol-name (plist-get sys :name))))))
-             'help-echo 'mode-line-mule-info-help-echo
-             'local-map mode-line-coding-system-map)))
-  (put 'mode-line-buffer-encoding 'risky-local-variable t)
-  (defvar mode-line-line-encoding
-    '(:eval (when-let ((eol (pcase (coding-system-eol-type buffer-file-coding-system)
-                              (0 "LF")
-                              (1 "CRLF")
-                              (2 "CR")
-                              (_ nil))))
-              (propertize
-               (concat " " eol)
-               'help-echo (format "Line ending style: %s"
-                                  (pcase eol
-                                    ("LF" "Unix style LF")
-                                    ("CRLF" "DOS style CRLF")
-                                    ("CR" "Mac style CR")
-                                    (_ "Undecided")))
-               'local-map (let ((map (make-sparse-keymap)))
-                            (define-key map [mode-line mouse-1] 'mode-line-change-eol)
-                            map)))))
-  (put 'mode-line-line-encoding 'risky-local-variable t)
-  (setq-default mode-line-format
-                '(" " mode-line-buffer-file-name mode-line-input-method
-                  mode-line-buffer-encoding mode-line-line-encoding
-                  mode-line-interactive-position (vc-mode vc-mode) " "
-                  mode-line-modes " " mode-line-misc-info))
-  ;; ;;;; Modeline
-;; (size-indication-mode)
-;; (setq display-time-24hr-format t
-;;       ;; display-time-format "%l:%M%p" ;  %b %y"
-;;       display-time-default-load-average nil)
-;; (display-time-mode)
-  (provide 'mode-line))
+  (setq doom-modeline-buffer-file-name-style 'truncate-upto-project
+        doom-modeline-modal-icon nil
+        doom-modeline-height 26)
+  (when window-system
+    (if (not (x-list-fonts "Symbols Nerd Font Mono"))
+        (nerd-icons-install-fonts)))
+  (doom-modeline-mode)
+  :config
+  (setq doom-modeline-persp-name t
+        doom-modeline-major-mode-icon t
+        doom-modeline-window-width-limit (- fill-column 10)))
 
 (use-package modus-themes
   :requires (local-config)
@@ -484,7 +430,7 @@ applied to the name.")
      (string "#702f00")
      (bg-line-number-active "#f0f0f0")))
   (modus-vivendi-palette-overrides
-   `((bg-main ,(if (in-termux-p) "#000000" "#181818"))
+   `((bg-main  "#181818")
      (bg-line-number-active "#1e1e1e")
      (string "#f5aa80")))
   :custom-face
@@ -527,20 +473,44 @@ applied to the name.")
      (underline-link-symbolic unspecified)
      ,@modus-themes-preset-overrides-faint))
   :config
-  (load-theme
-   (if (dark-mode-enabled-p)
-       local-config-dark-theme
-     local-config-light-theme)
-   t))
+  (load-theme local-config-light-theme t))
 
 ;; doom-modeline dropped all-the-icons support in favor of nerd-icons
 (use-package nerd-icons
+  :init
+  (when window-system
+    (if (not (x-list-fonts "Symbols Nerd Font Mono"))
+        (nerd-icons-install-fonts))))
   ;; :custom
   ;; The Nerd Font you want to use in GUI
   ;; "Symbols Nerd Font Mono" is the default and is recommended
   ;; but you can use any other Nerd Font if you want
   ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
-  )
+ (use-package nerd-icons-ibuffer
+  :hook
+  (ibuffer-mode . nerd-icons-ibuffer-mode))
+
+(use-package nerd-icons-completion
+  :after marginalia
+  :config
+  (nerd-icons-completion-mode 1)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
+
+(defmacro +customize-faces-by-prefix (prefix &rest properties)
+  "Customize faces in FACE-LIST with names starting with PREFIX.
+PROPERTIES is a list of face property-value pairs."
+  (let* ((faces (seq-filter (lambda (face)
+                              (string-prefix-p prefix (symbol-name face)))
+                            (face-list)))
+         (faces-with-props (mapcar (lambda (face)
+                                     `'(,face ((t ,@properties))))
+                                   faces)))
+    `(custom-set-faces
+      ,@faces-with-props)))
+
+;; Prevent bold in icons
+(with-eval-after-load 'nerd-icons-completion
+  (+customize-faces-by-prefix "nerd-icons-" :weight regular))
 
 (use-package pixel-scroll
   :straight nil
@@ -549,17 +519,17 @@ applied to the name.")
   :custom
   (scroll-margin 0))
 
-(use-package tooltip
-  :straight nil
-  :when (window-system)
-  :custom
-  (tooltip-x-offset 0)
-  (tooltip-y-offset (line-pixel-height))
-  (tooltip-frame-parameters
-   `((name . "tooltip")
-     (internal-border-width . 2)
-     (border-width . 1)
-     (no-special-glyphs . t))))
+;; (use-package tooltip
+;;   :straight nil
+;;   :when IS-GUI?
+;;   :custom
+;;   (tooltip-x-offset 0)
+;;   (tooltip-y-offset (line-pixel-height))
+;;   (tooltip-frame-parameters
+;;    `((name . "tooltip")
+;;      (internal-border-width . 2)
+;;      (border-width . 1)
+;;      (no-special-glyphs . t))))
 
 (use-package window
   :straight nil
@@ -641,62 +611,10 @@ applied to the name.")
 ;;________________________________________________________________
 ;;;    Settings
 ;;________________________________________________________________
-;; By default emacs will not delete selection text when typing on it, let's fix it
-;; (delete-selection-mode t)
-;; ;; find-file-at-point, smarter C-x C-f when point on path or URL
-;; (ffap-bindings)
-;; ;; Ask y or n instead of yes or no
-;; (defalias 'yes-or-no-p 'y-or-n-p)
 
-;; (mouse-avoidance-mode 'exile)
 ;; ;; Font lock of special Dash variables (it, acc, etc.). Comes default with Emacs.
 ;; (global-dash-fontify-mode)
-;; (when window-system (global-prettify-symbols-mode t))
-
-
-
-;; ;;;; General But Better Defaults
-;; (setq-default
-;;  ad-redefinition-action 'accept     ; Silence warnings for redefinition.
-;;  confirm-kill-emacs 'yes-or-no-p    ; Confirm before exiting Emacs.
-;;  cursor-in-non-selected-windows nil ; Hide the cursor in inactive windows.
-;;  speedbar t                         ; Quick file access with bar.
-;;  backup-by-copying t                ; don't clobber symlinks.
-;;  ;; backup-directory-alist `(("."~/.config/emacs/var/backup/per-session))
-;;  default-directory "~/"
-;;  custom-safe-themes t
-;;  load-prefer-newer t ; don't use the compiled code if its the older package.
-;;  make-backup-files t               ; backup of a file the first time it is saved.
-;;  delete-by-moving-to-trash t       ; move deleted files to trash.
-;;  delete-old-versions t             ; delete excess backup files silently.
-;;  kept-new-versions 6               ; newest versions to keep when a new numbered backup is made (default: 2).
-;;  kept-old-versions 2               ; oldest versions to keep when a new numbered backup is made (default: 2).
-;;  version-control t                 ; version numbers for backup files.
-;;  auto-save-default t               ; auto-save every buffer that visits a file.
-;;  auto-save-timeout 30              ; number of seconds idle time before auto-save (default: 30).
-;;  auto-save-interval 200            ; number of keystrokes between auto-saves (default: 300).
-;;  compilation-always-kill t         ; kill compilation process before starting another.
-;;  compilation-ask-about-save nil    ; save all buffers on `compile'.
-;;  compilation-scroll-output t
-;;  tab-width 4
-;;  indent-tabs-mode nil              ; set indentation with spaces instead of tabs with 4 spaces.
-;;  indent-line-function 'insert-tab
-;;  require-final-newline t
-;;  x-select-enable-clipboard t       ; Makes killing/yanking interact with the clipboard.
-;;  save-interprogram-paste-before-kill t ; Save clipboard strings into kill ring before replacing them.
-;;  apropos-do-all t                  ; Shows all options when running apropos.
-;;  mouse-yank-at-point t             ; Mouse yank commands yank at point instead of at click.
-;;  message-log-max 1000
-;;  fill-column 80
-;;  make-pointer-invisible t          ; hide cursor when writing.
-;;  column-number-mode t              ; show (line,column) in mode-line.
-;;  cua-selection-mode t              ; delete regions.
-;;  enable-recursive-minibuffers t    ; allow commands to be run on minibuffers.
-;;  dired-kill-when-opening-new-dired-buffer t   ; delete dired buffer when opening another directory
-;;  backward-delete-char-untabify-method 'hungry ; Alternatives is: 'all (remove all consecutive whitespace characters, even newlines).
-;;  )
-
-
+(when window-system (global-prettify-symbols-mode t))
 
 (provide 'init-ui)
 ;;; init-ui.el ends here

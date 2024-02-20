@@ -1,4 +1,4 @@
-;;; init.el --- Main configuration file -*- lexical-binding: t; no-byte-compile: t-*-
+;;; init.el --- Main configuration file -*- lexical-binding: t; coding: utf-8; no-byte-compile: t-*-
 
 ;; Author: Red Elvis
 ;; Keywords: Emacs configuration
@@ -34,47 +34,32 @@ If you experience stuttering, increase this.")
 ;;             (add-to-list 'load-path name)))))))
 
 ;; (update-to-load-path (expand-file-name "elpa" user-emacs-directory))
-
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-
-;; I'll add an extra note here since user customizations are important.
-;; Emacs actually offers a UI-based customization menu, "M-x customize".
-;; You can use this menu to change variable values across Emacs. By default,
-;; changing a variable will write to your init.el automatically, mixing
-;; your hand-written Emacs Lisp with automatically-generated Lisp from the
-;; customize menu. The following setting instead writes customizations to a
-;; separate file, custom.el, to keep your init.el clean.
-(setf custom-file (expand-file-name "custom.el" user-emacs-directory))
-(when (and custom-file
-           (file-exists-p custom-file))
-  (load custom-file nil :nomessage))
-;; Separate Customization from init file
-;; (setq-default custom-file (expand-file-name "etc/custom.el" user-emacs-directory))
-;; (unless (file-exists-p custom-file)
-;;   (with-temp-buffer
-;;     (write-file custom-file)))
-;;;; Load custom-files
 ;; (defun load-directory (dir)
 ;;   "Load all *.el files in a directory."
 ;;   (let ((load-it (lambda (f)
 ;;                    (load-file (concat (file-name-as-directory dir) f)))))
 ;;     (mapc load-it (directory-files dir nil "\\.el$"))))
-;; load-path
 
-;; (when (file-exists-p custom-file)
-;;   (load custom-file 'noerror 'nomessage))
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
-
-(require 'init-const)
-
-;; compilations, enhence elisp.
+;; compilations, enhance elisp.
 (require 'cl-lib)
 (require 'subr-x)
 (require 'bytecomp)
 
+;; Constants
+(require 'init-const)
+;; package management
 (require 'init-elpa)
 
 ;; AutoGC
+(defun gas/display-startup-time ()
+  (message "Emacs chargé dans %s avec %d ramasse-miettes."
+           (format "%.2f secondes"
+                   (float-time
+                    (time-subtract after-init-time before-init-time)))
+           gcs-done))
+
 (add-hook 'emacs-startup-hook
           (lambda ()
             (if (boundp 'after-focus-change-function)
@@ -95,85 +80,38 @@ If you experience stuttering, increase this.")
             (makunbound 'file-name-handler-alist-original)
             ;; extra minibuffer
             (add-hook 'minibuffer-setup-hook #'gc-minibuffer-setup-hook)
-            (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)))
-;; -AutoGC
+            (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)
+            ;; startup
+            (add-hook 'emacs-startup-hook #'gas/display-startup-time)))
 
-(defun gas/display-startup-time ()
-  (message "Emacs chargé dans %s avec %d ramasse-miettes."
-           (format "%.2f secondes"
-                   (float-time
-                    (time-subtract after-init-time before-init-time)))
-           gcs-done))
-
-(add-hook 'emacs-startup-hook #'gas/display-startup-time)
-
-
-(use-package scratch)
-;; Show event history and command history of some or all buffers.
-;; (use-package command-log-mode)
 ;; load PATH from shell
 (if (not (getenv "TERM_PROGRAM"))
     (setenv "PATH"
             (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
 (setq exec-path (split-string (getenv "PATH") ":"))
 
-(use-package subr
-  :straight nil
-  :no-require
-  :init
-  (if (boundp 'use-short-answers)
-      (setq-default use-short-answers t)
-    (fset 'yes-or-no-p 'y-or-n-p)))
-
-(require 'init-ui)
 (require 'init-bindings)
-(require 'init-files)
+(require 'init-files-buffers)
+(require 'init-ui)
+
+(require 'init-tools)
+(require 'init-search)
+(require 'init-editor)
 (require 'init-text)
 (require 'init-org)
-(require 'init-tools)
-(require 'init-editor)
-(require 'init-complete)
-(require 'init-search)
-(require 'init-coding)
+
+
+
 (require 'init-personal)
 
+(require 'init-lsp-treesit)
 (require 'init-copilot)
-
-
-;; (use-package repeat-mode
-;;   :hook (after-init . repeat-mode))
-
-
-;;________________________________________________________________
-;;;;    Custom settings
-;;________________________________________________________________
+(require 'init-coding)
+(require 'init-complete)
 
 
 ;; Garbage collection on focus-out, Emacs should feel snappier
 (add-function :after after-focus-change-function (lambda () (unless (frame-focus-state) (save-some-buffers t))))
-
-
-
-
-;;;; remove old backup files
-;; Automatically purge backup files not accessed in a week:
-;; (message "Deleting old backup files...")
-;; (let ((week (* 60 60 24 7))
-;;       (current (float-time (current-time))))
-;;   (dolist (file (directory-files temporary-file-directory t))
-;;     (when (and (backup-file-name-p file)
-;;                (> (- current (float-time (fifth (file-attributes file))))
-;;                   week))
-;;       (message "%s" file)
-;;       (delete-file file))))
-
-;;; enable some major-mode
-(put 'scroll-left 'disabled nil)
-(put 'downcase-region 'disabled nil)
-(put 'narrow-to-region 'disabled nil)
-(put 'narrow-to-defun  'disabled nil)
-(put 'narrow-to-page   'disabled nil)
-(put 'dired-find-alternate-file 'disabled nil)
 
 ;;; Finish up
 (provide 'init)

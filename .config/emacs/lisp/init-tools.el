@@ -1,6 +1,111 @@
 ;;; lisp/init-tools.el --- Emacs Tools -*- lexical-binding: t -*-
 
 ;;; Tools
+(use-package project
+  :straight (:type built-in)
+  :bind-keymap ("s-p" . project-prefix-map)
+  :bind ( :map project-prefix-map
+          ("s" . project-save-some-buffers)
+          ("t" . eshell)
+          ("v" . magit)
+          ("s-p" . project-switch-project))
+  :bind (("C-c k" . #'project-kill-buffers)
+         ("C-c m" . #'project-compile)
+         ("C-x f" . #'find-file)
+         ("C-c F" . #'project-switch-project)
+         ("C-c R" . #'pt/recentf-in-project)
+         ("C-c f" . #'project-find-file))
+  :custom
+  ;; This is one of my favorite things: you can customize
+  ;; the options shown upon switching projects.
+  (project-switch-commands
+   '((project-find-file "Find file")
+     (magit-project-status "Magit" ?g)
+     (deadgrep "Grep" ?h)
+     (pt/project-run-vterm "vterm" ?t)
+     (project-dired "Dired" ?d)
+     (pt/recentf-in-project "Recently opened" ?r)))
+  (compilation-always-kill t)
+  (project-vc-merge-submodules nil)
+  (project-compilation-buffer-name-function 'project-prefixed-buffer-name)
+  (project-vc-extra-root-markers
+   '("Cargo.toml" "compile_commands.json"
+     "compile_flags.txt" "project.clj"
+     "deps.edn" "shadow-cljs.edn" "bb.edn"))
+  :preface
+  (defcustom project-compilation-mode nil
+    "Mode to run the `compile' command with."
+    :type 'symbol
+    :group 'project
+    :safe #'symbolp
+    :local t)
+  (defun project-save-some-buffers (&optional arg)
+    "Save some modified file-visiting buffers in the current project.
+
+Optional argument ARG (interactively, prefix argument) non-nil
+means save all with no questions."
+    (interactive "P")
+    (let* ((project-buffers (project-buffers (project-current)))
+           (pred (lambda () (memq (current-buffer) project-buffers))))
+      (funcall-interactively #'save-some-buffers arg pred)))
+  (define-advice compilation-start
+      (:filter-args (args) use-project-compilation-mode)
+    (let ((cmd (car args))
+          (mode (cadr args))
+          (rest (cddr args)))
+      (if (and (null mode) project-compilation-mode)
+          (append (list cmd project-compilation-mode) rest)
+        args)))
+  (define-advice project-root (:filter-return (project) abbreviate-project-root)
+    (abbreviate-file-name project))
+  (defun project-make-predicate-buffer-in-project-p ()
+    (let ((project-buffers (project-buffers (project-current))))
+      (lambda () (memq (current-buffer) project-buffers))))
+  (define-advice project-compile (:around (fn) save-project-buffers-only)
+    "Only ask to save project-related buffers."
+    (defvar compilation-save-buffers-predicate)
+    (let ((compilation-save-buffers-predicate
+           (project-make-predicate-buffer-in-project-p)))
+      (funcall fn)))
+  (define-advice recompile
+      (:around (fn &optional edit-command) save-project-buffers-only)
+    "Only ask to save project-related buffers if inside of a project."
+    (defvar compilation-save-buffers-predicate)
+    (let ((compilation-save-buffers-predicate
+           (if (project-current)
+               (project-make-predicate-buffer-in-project-p)
+             compilation-save-buffers-predicate)))
+      (funcall fn edit-command)))
+  :config
+  (defun gas/open-project nil
+    "Get a view of the project."
+    (interactive)
+    (dired (project-root (project-current)))
+    ;;(dirvish)
+    ;;(vterm-toggle-show)
+    (windmove-up)
+    (windmove-up))
+   ;;(setq project-switch-commands 'gas/open-project)
+  (add-to-list 'project-switch-commands
+               '(project-dired "Dired"))
+  (add-to-list 'project-switch-commands
+               '(project-switch-to-buffer "Switch buffer")))
+
+(use-package projectile
+ ;; :delight
+  :config
+  (setq projectile-project-search-path '(("~/work" . 2)  ("~/.config" . 1) ("~/dev/frap" . 3)))
+  (setq ;; projectile-enable-caching nil
+   projectile-sort-order 'recentf )
+  (projectile-mode))
+
+(defun pt/recentf-in-project ()
+  "As `recentf', but filtering based on the current project root."
+  (interactive)
+  (let* ((proj (project-current))
+         (root (if proj (project-root proj) (user-error "Not in a project"))))
+    (cl-flet ((ok (fpath) (string-prefix-p root fpath)))
+      (find-file (completing-read "Find recent file:" recentf-list #'ok)))))
 
 (use-package comint
   :straight nil
@@ -66,66 +171,8 @@
 ;;   :custom
 ;;   (eshell-modules-list
 ;;    (cl-remove 'eshell-term eshell-modules-list)))
-
-
-(use-package project
-  :bind ( :map project-prefix-map
-          ("s" . project-save-some-buffers))
-  :custom
-  (project-compilation-buffer-name-function 'project-prefixed-buffer-name)
-  (project-vc-extra-root-markers
-   '("Cargo.toml" "compile_commands.json"
-     "compile_flags.txt" "project.clj"
-     "deps.edn" "shadow-cljs.edn" "bb.edn"))
-  :preface
-  (defcustom project-compilation-mode nil
-    "Mode to run the `compile' command with."
-    :type 'symbol
-    :group 'project
-    :safe #'symbolp
-    :local t)
-  (defun project-save-some-buffers (&optional arg)
-    "Save some modified file-visiting buffers in the current project.
-
-Optional argument ARG (interactively, prefix argument) non-nil
-means save all with no questions."
-    (interactive "P")
-    (let* ((project-buffers (project-buffers (project-current)))
-           (pred (lambda () (memq (current-buffer) project-buffers))))
-      (funcall-interactively #'save-some-buffers arg pred)))
-  (define-advice compilation-start
-      (:filter-args (args) use-project-compilation-mode)
-    (let ((cmd (car args))
-          (mode (cadr args))
-          (rest (cddr args)))
-      (if (and (null mode) project-compilation-mode)
-          (append (list cmd project-compilation-mode) rest)
-        args)))
-  (define-advice project-root (:filter-return (project) abbreviate-project-root)
-    (abbreviate-file-name project))
-  (defun project-make-predicate-buffer-in-project-p ()
-    (let ((project-buffers (project-buffers (project-current))))
-      (lambda () (memq (current-buffer) project-buffers))))
-  (define-advice project-compile (:around (fn) save-project-buffers-only)
-    "Only ask to save project-related buffers."
-    (defvar compilation-save-buffers-predicate)
-    (let ((compilation-save-buffers-predicate
-           (project-make-predicate-buffer-in-project-p)))
-      (funcall fn)))
-  (define-advice recompile
-      (:around (fn &optional edit-command) save-project-buffers-only)
-    "Only ask to save project-related buffers if inside of a project."
-    (defvar compilation-save-buffers-predicate)
-    (let ((compilation-save-buffers-predicate
-           (if (project-current)
-               (project-make-predicate-buffer-in-project-p)
-             compilation-save-buffers-predicate)))
-      (funcall fn edit-command)))
-  :config
-  (add-to-list 'project-switch-commands
-               '(project-dired "Dired"))
-  (add-to-list 'project-switch-commands
-               '(project-switch-to-buffer "Switch buffer")))
+;;when I do a git-pull I'd like to see what's new
+(global-auto-revert-mode t)
 
 (use-package vc-hooks
   :straight nil
@@ -163,10 +210,14 @@ means save all with no questions."
             (kill-process process)
             (kill-buffer buffer)))))))
 
+(use-package transient)
+
+(global-set-key (kbd "C-x g") 'magit-status)
 (use-package magit
   :ensure t
-  :defer t
+  :defer 1
   :bind
+  ("C-c g" . magit-status)
   ("C-x g" . magit-status)
   :defines (magit-status-mode-map
             magit-revision-show-gravatars
@@ -175,6 +226,7 @@ means save all with no questions."
   :commands (magit-display-buffer-same-window-except-diff-v1
              magit-stage-file
              magit-unstage-file)
+  :mode (("COMMIT_EDITMSG" . git-commit-mode))
   :init
   (setq-default magit-git-executable (executable-find "git"))
   :hook (git-commit-mode . flyspell-mode)
@@ -222,7 +274,7 @@ means save all with no questions."
 (use-package git-gutter
   :ensure t
   :delight
-  :when window-system
+  :when IS-GUI?
   :defer t
   :bind (("C-x P" . git-gutter:popup-hunk)
          ("M-P" . git-gutter:previous-hunk)
@@ -232,7 +284,7 @@ means save all with no questions."
   :config
   (setq git-gutter:update-interval 2)
   (setq git-gutter:modified-sign "†") ; ✘
- ;; (setq git-gutter:added-sign "†")
+  (setq git-gutter:added-sign "†")
   ;; (setq git-gutter:deleted-sign "†")
   ;; (set-face-foreground 'git-gutter:added "Green")
   ;; (set-face-foreground 'git-gutter:modified "Gold")
@@ -243,7 +295,7 @@ means save all with no questions."
   :ensure t
   :delight
   :after git-gutter
-  :when window-system
+  :when IS-GUI?
   :defer t
   :init
   (require 'git-gutter-fringe)
@@ -274,8 +326,7 @@ means save all with no questions."
   :commands (git-link git-link-commit git-link-homepage))
 
 ;;;;; git-time
-(use-package git-timemachine
-  :ensure t)
+(use-package git-timemachine)
 
 (use-package server
   :straight nil
@@ -318,8 +369,6 @@ means save all with no questions."
            ("INFO"  . "#0e9030")
            ("TWEAK" . "#fe9030")
            ("PERF"  . "#e09030")))))
-
-(use-package dumb-jump)
 
 (use-package compile
   :straight nil
@@ -378,175 +427,175 @@ Set automatically by the `" (symbol-name compilation-mode-name) "'."))
            ,@body)
          (provide ',compilation-mode-name)))))
 
-(use-package clojure-compilation-mode
-  :straight nil
-  :no-require
-  :preface
-  (defun clojure-compilation--split-classpath (classpath)
-    "Split the CLASSPATH string."
-    (split-string classpath ":" t "[[:space:]\n]+"))
-  (defmemo clojure-compilation--get-project-dependencies-memo
-      (command _deps-file _mod-time)
-    "Call COMMAND to obtain the classpath string.
-DEPS-FILE and MOD-TIME are used for memoization."
-    (thread-last
-      command
-      shell-command-to-string
-      clojure-compilation--split-classpath
-      (seq-filter (lambda (s) (string-suffix-p ".jar" s)))))
-  (defun clojure-compilation--get-lein-project-dependencies (root)
-    "Obtain classpath from lein for ROOT."
-    (let* ((project-file (expand-file-name "project.clj" root))
-           (mod-time (file-attribute-modification-time (file-attributes project-file))))
-      (clojure-compilation--get-project-dependencies-memo
-       "lein classpath" project-file mod-time)))
-  (defun clojure-compilation--get-deps-project-dependencies (root)
-    "Obtain classpath from deps for ROOT."
-    (let* ((project-file (expand-file-name "deps.edn" root))
-           (mod-time (file-attribute-modification-time (file-attributes project-file))))
-      (clojure-compilation--get-project-dependencies-memo
-       "clojure -Spath" project-file mod-time)))
-  (defun clojure-compilation-get-project-dependencies (project)
-    "Get dependencies of the given PROJECT.
-Returns a list of all jar archives."
-    (when (bound-and-true-p tramp-gvfs-enabled)
-      (let ((root (project-root project)))
-        (cond ((file-exists-p (expand-file-name "deps.edn" root))
-               (clojure-compilation--get-deps-project-dependencies root))
-              ((file-exists-p (expand-file-name "project.clj" root))
-               (clojure-compilation--get-lein-project-dependencies root))))))
-  (defvar-local clojure-compilation-project-deps nil
-    "List of project's dependencies")
-  (defvar-local clojure-compilation-project-deps-mod-time nil
-    "Accumulated modification time of all project's libraries")
-  (define-project-compilation-mode clojure-compilation
-    (require 'tramp-gvfs)
-    (setq-local clojure-compilation-project-deps
-                (clojure-compilation-get-project-dependencies
-                 clojure-compilation-current-project))
-    (setq-local clojure-compilation-project-deps-mod-time
-                (seq-reduce #'+ (mapcar (lambda (f)
-                                          (time-to-seconds
-                                           (file-attribute-modification-time
-                                            (file-attributes f))))
-                                        clojure-compilation-project-deps)
-                            0)))
-  (defun clojure-compilation--find-file-in-project (file)
-    "Check if FILE is part of the currently compiled project."
-    (if (file-name-absolute-p file)
-        file
-      (seq-find
-       (lambda (s) (string-suffix-p file s))
-       clojure-compilation-current-project-files)))
-  (defun clojure-compilation--file-exists-jar-p (jar file)
-    "Check if FILE is present in the JAR archive."
-    (with-temp-buffer
-      (when (zerop (call-process "jar" nil (current-buffer) nil "-tf" jar))
-        (goto-char (point-min))
-        (save-match-data
-          (re-search-forward (format "^%s$" (regexp-quote file)) nil t)))))
-  (defmemo clojure-compilation--find-dep-memo
-      (file _project _deps-mod-time)
-    "Find FILE in current project dependency list.
-PROJECT and DEPS-MOD-TIME are used for memoizing the call."
-    (when (not (string-empty-p file))
-      (seq-find (lambda (d)
-                  (clojure-compilation--file-exists-jar-p d file))
-                clojure-compilation-project-deps)))
-  (defun clojure-compilation--find-dep (file)
-    "Find FILE in current project dependency list."
-    (clojure-compilation--find-dep-memo
-     file
-     clojure-compilation-current-project
-     clojure-compilation-project-deps-mod-time))
-  (defun clojure-compilation-filename ()
-    "Function that gets filename from the error message.
-If the filename comes from a dependency, try to guess the
-dependency artifact based on the project's dependencies."
-    (when-let ((filename (substring-no-properties (match-string 1))))
-      (or (clojure-compilation--find-file-in-project filename)
-          (when-let ((dep (clojure-compilation--find-dep filename)))
-            (concat (expand-file-name dep) "/" filename)))))
-  :config
-  (compile-add-error-syntax
-   'clojure-compilation 'some-warning
-   "^\\([^:[:space:]]+\\):\\([0-9]+\\) "
-   :file #'clojure-compilation-filename
-   :line 2 :level 'warn :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clj-kondo-warning
-   "^\\(/[^:]+\\):\\([[:digit:]]+\\):\\([[:digit:]]+\\): warning"
-   :file 1 :line 2 :col 3 :level 'warn :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clj-kondo-error
-   "^\\(/[^:]+\\):\\([[:digit:]]+\\):\\([[:digit:]]+\\): error"
-   :file 1 :line 2 :col 3 :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'kaocha-tap
-   "^not ok.*(\\([^:]*\\):\\([0-9]*\\))"
-   :file #'clojure-compilation-filename
-   :line 2 :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clojure-fail
-   "^.*\\(?:FAIL\\|ERROR\\) in.*(\\([^:]*\\):\\([0-9]*\\))"
-   :file #'clojure-compilation-filename
-   :line 2 :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clojure-reflection-warning
-   "^Reflection warning,[[:space:]]*\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\)"
-   :file #'clojure-compilation-filename
-   :line 2 :col 3
-   :level 'warn :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clojure-performance-warning
-   "^Performance warning,[[:space:]]*\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\)"
-   :file #'clojure-compilation-filename
-   :line 2 :col 3
-   :level 'warn :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'clojure-syntax-error
-   "^Syntax error .* at (\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\))"
-   :file #'clojure-compilation-filename
-   :line 2 :col 3)
-  (compile-add-error-syntax
-   'clojure-compilation 'kaocha-unit-error
-   "^ERROR in unit (\\([^:]+\\):\\([0-9]+\\))"
-   :file #'clojure-compilation-filename
-   :line 2 :hyperlink 1 :highlight 1)
-  (compile-add-error-syntax
-   'clojure-compilation 'eastwood-warning
-   "^\\([^:[:space:]]+\\):\\([0-9]+\\):\\([0-9]+\\):"
-   :file #'clojure-compilation-filename
-   :line 2 :col 3 :level 'warn :hyperlink 1 :highlight 1))
+;; (use-package clojure-compilation-mode
+;;   :straight nil
+;;   :no-require
+;;   :preface
+;;   (defun clojure-compilation--split-classpath (classpath)
+;;     "Split the CLASSPATH string."
+;;     (split-string classpath ":" t "[[:space:]\n]+"))
+;;   (defmemo clojure-compilation--get-project-dependencies-memo
+;;       (command _deps-file _mod-time)
+;;     "Call COMMAND to obtain the classpath string.
+;; DEPS-FILE and MOD-TIME are used for memoization."
+;;     (thread-last
+;;       command
+;;       shell-command-to-string
+;;       clojure-compilation--split-classpath
+;;       (seq-filter (lambda (s) (string-suffix-p ".jar" s)))))
+;;   (defun clojure-compilation--get-lein-project-dependencies (root)
+;;     "Obtain classpath from lein for ROOT."
+;;     (let* ((project-file (expand-file-name "project.clj" root))
+;;            (mod-time (file-attribute-modification-time (file-attributes project-file))))
+;;       (clojure-compilation--get-project-dependencies-memo
+;;        "lein classpath" project-file mod-time)))
+;;   (defun clojure-compilation--get-deps-project-dependencies (root)
+;;     "Obtain classpath from deps for ROOT."
+;;     (let* ((project-file (expand-file-name "deps.edn" root))
+;;            (mod-time (file-attribute-modification-time (file-attributes project-file))))
+;;       (clojure-compilation--get-project-dependencies-memo
+;;        "clojure -Spath" project-file mod-time)))
+;;   (defun clojure-compilation-get-project-dependencies (project)
+;;     "Get dependencies of the given PROJECT.
+;; Returns a list of all jar archives."
+;;     (when (bound-and-true-p tramp-gvfs-enabled)
+;;       (let ((root (project-root project)))
+;;         (cond ((file-exists-p (expand-file-name "deps.edn" root))
+;;                (clojure-compilation--get-deps-project-dependencies root))
+;;               ((file-exists-p (expand-file-name "project.clj" root))
+;;                (clojure-compilation--get-lein-project-dependencies root))))))
+;;   (defvar-local clojure-compilation-project-deps nil
+;;     "List of project's dependencies")
+;;   (defvar-local clojure-compilation-project-deps-mod-time nil
+;;     "Accumulated modification time of all project's libraries")
+;;   (define-project-compilation-mode clojure-compilation
+;;     (require 'tramp-gvfs)
+;;     (setq-local clojure-compilation-project-deps
+;;                 (clojure-compilation-get-project-dependencies
+;;                  clojure-compilation-current-project))
+;;     (setq-local clojure-compilation-project-deps-mod-time
+;;                 (seq-reduce #'+ (mapcar (lambda (f)
+;;                                           (time-to-seconds
+;;                                            (file-attribute-modification-time
+;;                                             (file-attributes f))))
+;;                                         clojure-compilation-project-deps)
+;;                             0)))
+;;   (defun clojure-compilation--find-file-in-project (file)
+;;     "Check if FILE is part of the currently compiled project."
+;;     (if (file-name-absolute-p file)
+;;         file
+;;       (seq-find
+;;        (lambda (s) (string-suffix-p file s))
+;;        clojure-compilation-current-project-files)))
+;;   (defun clojure-compilation--file-exists-jar-p (jar file)
+;;     "Check if FILE is present in the JAR archive."
+;;     (with-temp-buffer
+;;       (when (zerop (call-process "jar" nil (current-buffer) nil "-tf" jar))
+;;         (goto-char (point-min))
+;;         (save-match-data
+;;           (re-search-forward (format "^%s$" (regexp-quote file)) nil t)))))
+;;   (defmemo clojure-compilation--find-dep-memo
+;;       (file _project _deps-mod-time)
+;;     "Find FILE in current project dependency list.
+;; PROJECT and DEPS-MOD-TIME are used for memoizing the call."
+;;     (when (not (string-empty-p file))
+;;       (seq-find (lambda (d)
+;;                   (clojure-compilation--file-exists-jar-p d file))
+;;                 clojure-compilation-project-deps)))
+;;   (defun clojure-compilation--find-dep (file)
+;;     "Find FILE in current project dependency list."
+;;     (clojure-compilation--find-dep-memo
+;;      file
+;;      clojure-compilation-current-project
+;;      clojure-compilation-project-deps-mod-time))
+;;   (defun clojure-compilation-filename ()
+;;     "Function that gets filename from the error message.
+;; If the filename comes from a dependency, try to guess the
+;; dependency artifact based on the project's dependencies."
+;;     (when-let ((filename (substring-no-properties (match-string 1))))
+;;       (or (clojure-compilation--find-file-in-project filename)
+;;           (when-let ((dep (clojure-compilation--find-dep filename)))
+;;             (concat (expand-file-name dep) "/" filename)))))
+;;   :config
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'some-warning
+;;    "^\\([^:[:space:]]+\\):\\([0-9]+\\) "
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :level 'warn :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clj-kondo-warning
+;;    "^\\(/[^:]+\\):\\([[:digit:]]+\\):\\([[:digit:]]+\\): warning"
+;;    :file 1 :line 2 :col 3 :level 'warn :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clj-kondo-error
+;;    "^\\(/[^:]+\\):\\([[:digit:]]+\\):\\([[:digit:]]+\\): error"
+;;    :file 1 :line 2 :col 3 :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'kaocha-tap
+;;    "^not ok.*(\\([^:]*\\):\\([0-9]*\\))"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clojure-fail
+;;    "^.*\\(?:FAIL\\|ERROR\\) in.*(\\([^:]*\\):\\([0-9]*\\))"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clojure-reflection-warning
+;;    "^Reflection warning,[[:space:]]*\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\)"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :col 3
+;;    :level 'warn :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clojure-performance-warning
+;;    "^Performance warning,[[:space:]]*\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\)"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :col 3
+;;    :level 'warn :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'clojure-syntax-error
+;;    "^Syntax error .* at (\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\))"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :col 3)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'kaocha-unit-error
+;;    "^ERROR in unit (\\([^:]+\\):\\([0-9]+\\))"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :hyperlink 1 :highlight 1)
+;;   (compile-add-error-syntax
+;;    'clojure-compilation 'eastwood-warning
+;;    "^\\([^:[:space:]]+\\):\\([0-9]+\\):\\([0-9]+\\):"
+;;    :file #'clojure-compilation-filename
+;;    :line 2 :col 3 :level 'warn :hyperlink 1 :highlight 1))
 
-(use-package fennel-compilation-mode
-  :straight nil
-  :no-require
-  :preface
-  (define-project-compilation-mode fennel-compilation)
-  :config
-  (compile-add-error-syntax
-   'fennel-compilation
-   'fennel-compile-error
-   "^Compile error in \\(.*\.fnl\\):\\([[:digit:]]+\\):?\\([[:digit:]]+\\)?\\$"
-   :file 1 :line 2 :col 3)
-  (compile-add-error-syntax
-   'fennel-compilation
-   'fennel-compile-error-2
-   "^\\(.*\.fnl\\):\\([[:digit:]]+\\):?\\([[:digit:]]+\\|\\?\\)? Compile error: "
-   :file 1 :line 2 :col 3)
-  (compile-add-error-syntax
-   'fennel-compilation
-   'fennel-test-error
-   "^not ok[[:space:]]+[0-9]+[^
-]+
-#[[:space:]]+\\([^:]+\\):\\([0-9]+\\):"
-   :file 1 :line 2 :level 'error)
-  (compile-add-error-syntax
-   'fennel-compilation
-   'lua-stacktrace
-   "\\(?:^[[:space:]]+\\([^
-:]+\\):\\([[:digit:]]+\\):[[:space:]]+in.+$\\)"
-   :file 1 :line 2))
+;; (use-package fennel-compilation-mode
+;;   :straight nil
+;;   :no-require
+;;   :preface
+;;   (define-project-compilation-mode fennel-compilation)
+;;   :config
+;;   (compile-add-error-syntax
+;;    'fennel-compilation
+;;    'fennel-compile-error
+;;    "^Compile error in \\(.*\.fnl\\):\\([[:digit:]]+\\):?\\([[:digit:]]+\\)?\\$"
+;;    :file 1 :line 2 :col 3)
+;;   (compile-add-error-syntax
+;;    'fennel-compilation
+;;    'fennel-compile-error-2
+;;    "^\\(.*\.fnl\\):\\([[:digit:]]+\\):?\\([[:digit:]]+\\|\\?\\)? Compile error: "
+;;    :file 1 :line 2 :col 3)
+;;   (compile-add-error-syntax
+;;    'fennel-compilation
+;;    'fennel-test-error
+;;    "^not ok[[:space:]]+[0-9]+[^
+;; ]+
+;; #[[:space:]]+\\([^:]+\\):\\([0-9]+\\):"
+;;    :file 1 :line 2 :level 'error)
+;;   (compile-add-error-syntax
+;;    'fennel-compilation
+;;    'lua-stacktrace
+;;    "\\(?:^[[:space:]]+\\([^
+;; :]+\\):\\([[:digit:]]+\\):[[:space:]]+in.+$\\)"
+;;    :file 1 :line 2))
 
 (provide 'init-tools)

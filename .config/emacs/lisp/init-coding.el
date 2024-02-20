@@ -1,8 +1,49 @@
-;;; my-lisp/coding.el --- Emacs Coding -*- lexical-binding: t -*-
+;;; lisp/coding.el --- Emacs Coding -*- lexical-binding: t -*-
+
+;; ;;;;  Better Coding Defaults
+;; (setq-default
+;;  compilation-always-kill t         ; kill compilation process before starting another.
+;;  compilation-ask-about-save nil    ; save all buffers on `compile'.
+;;  compilation-scroll-output t
+;;  )
+
+;; Subword mode helps us move around camel-case languages, and is
+;; mostly configured as a hook in those major modes. The only thing we
+;; customize about it is not wanting it cluttering the mode line.
+(use-package subword
+  :defer t
+  :delight)
+
 ;;; comment-dwim-2
+;;; comment/un-comment
 (use-package comment-dwim-2
   :bind ("M-;" . 'comment-dwim-2)
   :delight)
+
+(use-package paren
+  :hook (prog-mode . show-paren-mode))
+
+;; (electric-indent-mode nil)  ; Auto indentation.
+
+;; editorconfig for emacs
+;; (use-package editorconfig
+;;   :ensure t
+;;   :delight
+;;   :hook prog-mode text-mode
+;;   :config
+;;   (editorconfig-mode 1))
+
+;; (use-package display-line-numbers
+;;   :straight (:type built-in)
+;;   ;;:hook (display-line-numbers-mode . toggle-hl-line)
+;;   :hook prog-mode
+;;   :custom
+;;   (display-line-numbers-width 2)
+;;   (display-line-numbers-grow-only t)
+;;   (display-line-numbers-width-start t)
+;;   :config
+;;   (defun toggle-hl-line ()
+;;     (hl-line-mode (if display-line-numbers-mode 1 -1))))
 
 ;;; Navigation & Editing
 (use-package common-lisp-modes
@@ -43,73 +84,121 @@ common lisp-modes mode.
           ("M-q" . indent-sexp-or-fill)))
 
 ;;; Coding helpers
+
+(use-package dumb-jump
+  :defer t
+  :commands (dumb-jump-xref-activate)
+  :custom
+  (dumb-jump-prefer-searcher 'rg)
+  (dumb-jump-selector 'completing-read)
+  :init
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
+
 ;; (use-package eldoc
 ;;   :delight eldoc-mode
 ;;   :defer t
 ;;   :custom
 ;;   (eldoc-echo-area-use-multiline-p nil))
-
-(use-package eldoc-box
-  :delight)
-
-(use-package load-env-vars
-  :hook ((clojure-mode . @-set-project-env)
-         (lsp-mode     . @-set-project-env)
-         (cider-mode   . @-set-project-env))
+(use-package eldoc
+  :delight eldoc
+  :custom
+  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
   :config
-  (defvar @-dotenv-file-name ".env"
-    "The name of the .env file."
-    )
-  (defun @-find-env-file ()
-    "Find the closest .env file in the directory hierarchy."
+  (add-to-list 'display-buffer-alist
+               '("^\\*eldoc for" display-buffer-at-bottom
+                 (window-height . 4)))
+  (eldoc-add-command-completions "paredit-")
+  (eldoc-add-command-completions "combobulate-"))
 
-    (let* ((env-file-directory (locate-dominating-file "." @-dotenv-file-name))
-           (file-name (concat env-file-directory @-dotenv-file-name)))
-      (when (file-exists-p file-name)
-        file-name)))
-  (defun @-set-project-env ()
-    "Export all environment variables in the closest .env file."
+;; (use-package eldoc-box
+;;   :delight)
 
-    (let ((env-file (@-find-env-file)))
-      (when env-file
-        (load-env-vars env-file))))
-  )
 
-(use-package paren
-  :hook (prog-mode . show-paren-mode))
+;; (use-package load-env-vars
+;;   :straight nil
+;;   :hook ((clojure-mode . @-set-project-env)
+;;          (lsp-mode     . @-set-project-env)
+;;          (cider-mode   . @-set-project-env))
+;;   :config
+;;   (defvar @-dotenv-file-name ".env"
+;;     "The name of the .env file."
+;;     )
+;;   (defun @-find-env-file ()
+;;     "Find the closest .env file in the directory hierarchy."
+
+;;     (let* ((env-file-directory (locate-dominating-file "." @-dotenv-file-name))
+;;            (file-name (concat env-file-directory @-dotenv-file-name)))
+;;       (when (file-exists-p file-name)
+;;         file-name)))
+;;   (defun @-set-project-env ()
+;;     "Export all environment variables in the closest .env file."
+
+;;     (let ((env-file (@-find-env-file)))
+;;       (when env-file
+;;         (load-env-vars env-file)))))
+
+(defun chee/puni-unwrap-sexp (&optional open close)
+  (interactive)
+  (save-excursion
+    (let* ((bounds (puni-bounds-of-sexp-around-point))
+           (beg (+ (car bounds) 1))
+           (end (- (cdr bounds) 1)))
+      (puni-kill-region beg end)
+      (puni-backward-delete-char)
+      (if open (insert-char open))
+      (yank)
+      (if close (insert-char close)))))
+
+(defun chee/puni-rewrap-sexp nil
+  (interactive)
+  (let ((open (read-char "Opening character? "))
+        (close (read-char "Closing character? ")))
+    (chee/puni-unwrap-sexp open close)))
 
 (use-package puni
-  :ensure t
-  :hook (((common-lisp-modes-mode nxml-mode) . puni-mode)
-         (puni-mode . electric-pair-mode))
+  :defer t
+  :hook ((prog-mode common-lisp-modes-mode nxml-mode eval-expression-minibuffer-setup) . puni-mode)
+  ;;        (puni-mode . electric-pair-mode))
+  :init (puni-global-mode t)
+  (add-hook 'term-mode-hook #'puni-disable-puni-mode)
+  (add-hook 'eshell-mode-hook #'puni-disable-puni-mode)
   ;; paredit-like keys
-  :bind ( :map puni-mode-map
+  :bind (( :map puni-mode-map
+          ("C-=" . chee/puni-unwrap-sexp)
+          ("C-." . chee/puni-rewrap-sexp)
           ("C-M-f" . puni-forward-sexp-or-up-list)
           ("C-M-b" . puni-backward-sexp-or-up-list)
           ("C-M-t" . puni-transpose)
           ;; slurping & barfing
-          ("C-<left>" . puni-barf-forward)
-          ("C-}" . puni-barf-forward)
-          ("C-<right>" . puni-slurp-forward)
-          ("C-)" . puni-slurp-forward)
+          ;; ("C-<left>" . puni-barf-forward)
+          ;; ("C-}" . puni-barf-forward)
+          ;; ("C-<right>" . puni-slurp-forward)
+          ;; ("C-)" . puni-slurp-forward)
+          ;; ("C-(" . puni-slurp-backward)
+          ;; ("C-M-<left>" . puni-slurp-backward)
+          ;; ("C-{" . puni-barf-backward)
+          ;; ("C-M-<right>" . puni-barf-backward)
           ("C-(" . puni-slurp-backward)
-          ("C-M-<left>" . puni-slurp-backward)
-          ("C-{" . puni-barf-backward)
-          ("C-M-<right>" . puni-barf-backward)
+          ("M-(" . puni-barf-backward)
+          ("C-)" . puni-slurp-forward)
+          ("M-)" . puni-barf-forward)
           ;; depth chaining
           ("M-r" . puni-raise)
           ("M-s" . puni-splice)
-          ("M-<up>" . puni-splice-killing-backward)
-          ("M-<down>" . puni-splice-killing-forward)
-          ("M-(" . puni-wrap-round)
+          ;; ("M-<up>" . puni-splice-killing-backward)
+          ;; ("M-<down>" . puni-splice-killing-forward)
+          ;; ("M-(" . puni-wrap-round)
           ("M-{" . puni-wrap-curly)
           ("M-?" . puni-convolute)
           ("M-S" . puni-split)
+          ;; moving
+          ("M-<up>" . puni-beginning-of-sexp)
+          ("M-<down>" . puni-end-of-sexp)
           :map region-bindings-mode-map
           ("(" . puni-wrap-round)
           ("[" . puni-wrap-square)
           ("{" . puni-wrap-curly)
-          ("<" . puni-wrap-angle))
+          ("<" . puni-wrap-angle)))
   :preface
   (define-advice puni-kill-line (:before (&rest _) back-to-indentation)
     "Go back to indentation before killing the line if it makes sense to."
@@ -119,8 +208,9 @@ common lisp-modes mode.
         (back-to-indentation)))))
 
 (use-package puni
-  :when window-system
-  :bind ( :map puni-mode-map
+  :when IS-GUI?
+:defer t
+  :bind (:map puni-mode-map
           ;; doesn't work in terminal
           ("M-[" . puni-wrap-square)))
 
@@ -156,16 +246,23 @@ common lisp-modes mode.
                 ))
 (setq prettify-symbols-unprettify-at-point 'right-edge)
 
-(use-package profiler
-  :bind ("<f2>" . profiler-start-or-report)
-  :commands (profiler-report)
-  :preface
-  (defun profiler-start-or-report ()
-    (interactive)
-    (if (not (profiler-cpu-running-p))
-        (profiler-start 'cpu)
-      (profiler-report)
-      (profiler-cpu-stop))))
+;; auto-format different source code files extremely intelligently
+;; https://github.com/radian-software/apheleia
+;; (use-package apheleia
+;;   :ensure t
+;;   :config
+;;   (apheleia-global-mode +1))
+
+;; (use-package profiler
+;;   :bind ("<f2>" . profiler-start-or-report)
+;;   :commands (profiler-report)
+;;   :preface
+;;   (defun profiler-start-or-report ()
+;;     (interactive)
+;;     (if (not (profiler-cpu-running-p))
+;;         (profiler-start 'cpu)
+;;       (profiler-report)
+;;       (profiler-cpu-stop))))
 
 ;;;;; rainbow
 (use-package rainbow-mode
@@ -190,117 +287,55 @@ common lisp-modes mode.
           inferior-emacs-lisp-mode)
          . rainbow-delimiters-mode))
 
-(use-package region-bindings
-   :straight
-  (:host gitlab :repo "andreyorst/region-bindings.el")
-;;  :vc (:url "https://gitlab.com/andreyorst/region-bindings.el.git")
-  :commands (region-bindings-mode)
-  :preface
-  (defun region-bindings-off ()
-    (region-bindings-mode -1))
-  :hook ((after-init . global-region-bindings-mode)
-         ((elfeed-search-mode magit-mode mu4e-headers-mode)
-          . region-bindings-off)))
-
-;;; Languages
-;;treesitter
-
-(use-package treesit-auto
-  :straight (:host github :repo "renzmann/treesit-auto")
-  ;; TODO: M-x treesit-auto-install-all
-  :custom
-  (treesit-auto-install 'prompt)
-  :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
-
-(use-package awk-ts-mode)
-
 (use-package combobulate
-  :straight t
-  :hook ((python-ts-mode
-          js-ts-mode
-          css-ts-mode
-          yaml-ts-mode
-          typescript-ts-mode
-          tsx-ts-mode) . combobulate-mode)
+  :straight (:host github :repo "mickeynp/combobulate")
+  ;; :after treesit
   :custom
-  (combobulate-key-prefix "C-c o"))
+  ;; You can customize Combobulate's key prefix here.
+  ;; Note that you may have to restart Emacs for this to take effect!
+  (setq combobulate-key-prefix "C-c o")
+ ;; :config
+ ;; (define-key my/open-map "c" (cons "combobulate" combobulate-key-map))
+  :bind
+  (:map combobulate-key-map
+        ("S-<down>"  . combobulate-navigate-down-list-maybe)
+        ("S-<left>"  . combobulate-navigate-previous)
+        ("S-<right>" . combobulate-navigate-next)
+        ("M-<left>"  . combobulate-navigate-logical-previous)
+        ("M-<right>" . combobulate-navigate-logical-next)
+        ("S-<up>"    . combobulate-navigate-up-list-maybe)
+        ("M-<down>"  . combobulate-drag-down)
+        ("M-<up>"    . combobulate-drag-up))
 
-;;; LSP
-(use-package lsp-mode
-  :init
-  ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
-  (setq lsp-keymap-prefix "C-c l")
-  :commands lsp
-  :hook ((go-mode . lsp)
-         (go-ts-mode . lsp)
-         (typescript-ts-mode . lsp)
-         (python-mode . lsp)
-         (python-ts-mode . lsp)
-         (tsx-ts-mode . lsp)
-         (web-mode . lsp)
-         (c-mode . lsp)
-         (c++-mode . lsp)
-         (c++-ts-mode . lsp)
-         ;; if you want which-key integration
-         (lsp-mode . lsp-enable-which-key-integration)
-         (lsp-mode . lsp-diagnostics-mode))
-  :custom
-  ;; (lsp-keymap-prefix "C-c l")
-  (lsp-auto-configure nil)
-  (lsp-diagnostics-provider :flymake)
-  (lsp-modeline-diagnostics-enable t)
-  (lsp-completion-provider :none)
-  (lsp-session-file (locate-user-emacs-file ".lsp-session"))
-  (lsp-log-io nil)
-  (lsp-keep-workspace-alive nil)
-  (lsp-idle-delay 0.5)
-  (lsp-enable-xref t)
-  (lsp-signature-doc-lines 1)
-  :init
-  (setq lsp-use-plists t))
+  ;; Optional, but recommended.
+  ;;
+  ;; You can manually enable Combobulate with `M-x
+  ;; combobulate-mode'.
+  :hook ((python-ts-mode . combobulate-mode)
+         (js-ts-mode . combobulate-mode)
+         (css-ts-mode . combobulate-mode)
+         (yaml-ts-mode . combobulate-mode)
+         (json-ts-mode . combobulate-mode)
+         (typescript-mode . combobulate-mode)
+         (tsx-ts-mode . combobulate-mode)))
 
-(use-package lsp-ui
-  :demand t
-  :commands lsp-ui-mode)
+;;(use-package awk-ts-mode)
 
-(use-package lsp-completion
-  :straight nil
-  :no-require
-  :hook ((lsp-mode . lsp-completion-mode-maybe))
-  :commands (lsp-completion-mode)
-  :preface
-  (defun lsp-completion-mode-maybe ()
-    (unless (bound-and-true-p cider-mode)
-      (lsp-completion-mode 1))))
+(use-package typescript-mode
+ ;; :after tree-sitter
+  :mode   ("\\.js\\'" "\\.jsx\\'" "\\.ts\\'" "\\.tsx\\'" "\\.cjs\\'" "\\.mjs\\'"))
 
-(use-package lsp-treemacs
-  :defer t
-  :commands lsp-treemacs-errors-list
-  :custom
-  (lsp-treemacs-theme "Iconless"))
+;; (use-package typescript-ts-mode
+;;   :hook (typescript-ts-base-mode . (lambda ()
+;;                                      (setq js-indent-level 2)
+;;                                      (electric-pair-local-mode)
+;;                                      (lsp-deferred)
+;;                                      (lsp-lens-mode)
+;;                                      (dolist (h '(lsp-format-buffer
+;;                                                   lsp-organize-imports))
+;;                                        (add-hook 'before-save-hook h nil t)))))
 
-(use-package lsp-clojure
-  :straight nil
-  :demand t
-  :no-require
-  :after lsp-mode
-  :hook (cider-mode . cider-toggle-lsp-completion-maybe)
-   :hook ((clojure-mode
-          clojurec-mode
-          clojurescript-mode)
-         . lsp)
-   :preface
-  (defun cider-toggle-lsp-completion-maybe ()
-    (lsp-completion-mode (if (bound-and-true-p cider-mode) -1 1)))
-  :config
-  (setq lsp-file-watch-threshold 10000
-        lsp-signature-auto-activate nil
-        ;; I use clj-kondo from master
-        lsp-diagnostics-provider :none
-        lsp-enable-indentation nil ;; uncomment to use cider indentation instead of lsp
-        ))
+
 
 (use-package cc-mode
   :hook (c-mode-common . cc-mode-setup)
@@ -330,43 +365,43 @@ common lisp-modes mode.
   :hook ((emacs-lisp-mode . eldoc-mode)
          (emacs-lisp-mode . common-lisp-modes-mode)))
 
-;; (use-package fennel-mode
-;;     :straight
-;;   (:url "https://git.sr.ht/~technomancy/fennel-mode" )
-;;  ;; :vc (:url c"https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
-;;   :hook ((fennel-mode . fennel-proto-repl-minor-mode)
-;;          ((fennel-mode
-;;            fennel-repl-mode
-;;            fennel-proto-repl-mode)
-;;           . common-lisp-modes-mode))
-;;   :bind ( :map fennel-mode-map
-;;           ("M-." . xref-find-definitions)
-;;           ("M-," . xref-go-back)
-;;           :map fennel-repl-mode-map
-;;           ("C-c C-o" . fennel-repl-delete-all-output))
-;;   :custom
-;;   (fennel-eldoc-fontify-markdown t)
-;;   (fennel-scratch-use-proto-repl t)
-;;   :preface
-;;   (defun fennel-repl-delete-all-output ()
-;;     (interactive)
-;;     (save-excursion
-;;       (goto-char (process-mark (get-buffer-process (current-buffer))))
-;;       (forward-line 0)
-;;       (let ((inhibit-read-only t))
-;;         (delete-region (point) (point-min)))))
-;;   :config
-;;   (dolist (sym '(global local var set))
-;;     (put sym 'fennel-indent-function 1)))
+(use-package fennel-mode
+  :straight
+  (:url "https://git.sr.ht/~technomancy/fennel-mode" )
+  ;; :vc (:url c"https://git.sr.ht/~technomancy/fennel-mode" :branch "main" :rev :newest)
+  :hook ((fennel-mode . fennel-proto-repl-minor-mode)
+         ((fennel-mode
+           fennel-repl-mode
+           fennel-proto-repl-mode)
+          . common-lisp-modes-mode))
+  :bind ( :map fennel-mode-map
+          ("M-." . xref-find-definitions)
+          ("M-," . xref-go-back)
+          :map fennel-repl-mode-map
+          ("C-c C-o" . fennel-repl-delete-all-output))
+  :custom
+  (fennel-eldoc-fontify-markdown t)
+  (fennel-scratch-use-proto-repl t)
+  :preface
+  (defun fennel-repl-delete-all-output ()
+    (interactive)
+    (save-excursion
+      (goto-char (process-mark (get-buffer-process (current-buffer))))
+      (forward-line 0)
+      (let ((inhibit-read-only t))
+        (delete-region (point) (point-min)))))
+  :config
+  (dolist (sym '(global local var set))
+    (put sym 'fennel-indent-function 1)))
 
 ;; (use-package ob-fennel
 ;;   :straight nil
 ;;   :after org)
 
-(use-package isayt
-  :straight (:host gitlab :repo "andreyorst/isayt.el")
-  :delight isayt-mode
-  :hook (common-lisp-modes-mode . isayt-mode))
+;; (use-package isayt
+;;   :straight (:host gitlab :repo "andreyorst/isayt.el")
+;;   :delight isayt-mode
+;;   :hook (common-lisp-modes-mode . isayt-mode))
 
 (use-package markdown-mode
   :ensure t
@@ -386,14 +421,18 @@ common lisp-modes mode.
 ;;   :hook ((racket-mode racket-repl-mode) . common-lisp-modes-mode))
 
 (use-package yaml-mode
-  :mode ("\\.yml\\'" . yaml-mode)
+  :mode ("\\.ya?ml\\'" . yaml-ts-mode)
   :defer t
   :custom
   (yaml-indent-offset 2)
   :config
-  (add-hook 'yaml-mode-hook
-            '(lambda ()
-               (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
+  ;; (add-hook 'yaml-mode-hook
+  ;;           '(lambda ()
+  ;;              (setq indent-tabs-mode nil)
+  ;;              (setq tab-width 2)
+  ;;              (setq yaml-indent-offset 2)
+  ;;              (define-key yaml-mode-map "\C-m" 'newline-and-indent)))
+  )
 
 (use-package js
   :defer t
@@ -512,28 +551,28 @@ See `cider-find-and-clear-repl-output' for more info."
   ;; for doing this style of overlays.
   (defun corgi/eval-overlay (value point)
     (cider--make-result-overlay (format "%S" value)
-      :where point
-      :duration 'command)
+                                :where point
+                                :duration 'command)
     ;; Preserve the return value.
     value)
 
-(advice-add 'eval-region :around
-            (lambda (f beg end &rest r)
-              (corgi/eval-overlay
-               (apply f beg end r)
-               end)))
+  (advice-add 'eval-region :around
+              (lambda (f beg end &rest r)
+                (corgi/eval-overlay
+                 (apply f beg end r)
+                 end)))
 
-(advice-add 'eval-last-sexp :filter-return
-            (lambda (r)
-              (corgi/eval-overlay r (point))))
+  (advice-add 'eval-last-sexp :filter-return
+              (lambda (r)
+                (corgi/eval-overlay r (point))))
 
-(advice-add 'eval-defun :filter-return
-            (lambda (r)
-              (corgi/eval-overlay
-               r
-               (save-excursion
-                 (end-of-defun)
-                 (point))))))
+  (advice-add 'eval-defun :filter-return
+              (lambda (r)
+                (corgi/eval-overlay
+                 r
+                 (save-excursion
+                   (end-of-defun)
+                   (point))))))
 
 ;; (use-package clj-ns-name
 ;;   :vc (:url "https://github.com/corgi-emacs/clj-ns-name.git")
@@ -684,13 +723,13 @@ specific project."
             (lisp-eval-last-sexp)))))))
 
 (use-package json-mode
-  :ensure t)
+  :mode "\\.json\'")
 
 (use-package restclient
   :ensure t
   :mode (("\\.http\\'" . restclient-mode))
   :bind (:map restclient-mode-map
-          ("C-c C-f" . json-mode-beautify)))
+              ("C-c C-f" . json-mode-beautify)))
 
 (use-package restclient-jq
   :ensure t)
@@ -711,17 +750,21 @@ specific project."
 
 (use-package terraform-mode
   :custom (terraform-format-on-save t)
+  :mode (("\\.tf\\'" . terraform-mode))
   :ensure t
   :config
   (defun my-terraform-mode-init ()
     ;; if you want to use outline-minor-mode
-    (outline-minor-mode 1)
-    )
+    (outline-minor-mode 1))
   (add-hook 'terraform-mode-hook 'my-terraform-mode-init))
 
 (use-package yasnippet
   :ensure t
   :defer t
+  :bind (:map yas-minor-mode-map
+              ("TAB" . nil)
+              ("<tab>" . nil)
+              ("C-<tab>" . 'yas-expand))
   :commands (yas-minor-mode-on
              yas-expand
              yas-expand-snippet
@@ -740,26 +783,34 @@ specific project."
          (conf-mode . yas-minor-mode-on)
          (snippet-mode . yas-minor-mode-on))
   :config
+  (defun +yas/org-last-src-lang ()
+    "Return the language of the last src-block, if it exists."
+    (save-excursion
+      (beginning-of-line)
+      (when (re-search-backward "^[ \t]*#\\+begin_src" nil t)
+        (org-element-property :language (org-element-context)))))
   (setq yas-prompt-functions (delq #'yas-dropdown-prompt
-                                   yas-prompt-functions)
-        ;; yas-snippet-dirs '(file-templates-dir)
-        ))
+                                   yas-prompt-functions))
+  :init
+  (yas-global-mode 1))
 
 (use-package yasnippet-classic-snippets
-  :ensure t
+  :after yasnippet
   :demand t)
 
 (use-package consult-yasnippet
- :ensure t
- :after consult
- :config (global-set-key (kbd "M-Y") 'consult-yasnippet))
+  :ensure t
+  :after consult
+  :config (global-set-key (kbd "M-Y") 'consult-yasnippet))
 
 (use-package yasnippet-capf
- :ensure t
- :after cape
- :init
- (setq yasnippet-capf-lookup-by 'key) ;; key or name
- :config (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+  :after cape
+  ;;:init
+  ;;(setq yasnippet-capf-lookup-by 'key) ;; key or name
+  :config
+  ;;(add-to-list 'completion-at-point-functions #'yasnippet-capf)
+  )
+
 
 
 ;; This Emacs library provides a global mode which displays ugly form
@@ -770,4 +821,4 @@ specific project."
   :delight
   :hook (emacs-lisp-mode . page-break-lines-mode))
 
-(provide 'coding)
+(provide 'init-coding)
