@@ -409,9 +409,9 @@ If LOCAL-PORT is nil, PORT is used as local port."
   (setq doom-modeline-buffer-file-name-style 'truncate-upto-project
         doom-modeline-modal-icon nil
         doom-modeline-height 26)
-  (when window-system
-    (if (not (x-list-fonts "Symbols Nerd Font Mono"))
-        (nerd-icons-install-fonts)))
+  ;; (when window-system
+  ;;   (if (not (x-list-fonts "Symbols Nerd Font Mono"))
+  ;;       (nerd-icons-install-fonts)))
   (doom-modeline-mode)
   :config
   (setq doom-modeline-persp-name t
