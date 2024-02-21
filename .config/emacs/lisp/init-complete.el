@@ -84,43 +84,22 @@
   ;; function unless you use something similar
   (add-hook 'kb/themes-hooks #'(lambda () (interactive) (kind-icon-reset-cache))))
 
-(use-package corfu-doc
-  ;; NOTE 2022-02-05: At the time of writing, `corfu-doc' is not yet on melpa
-  :straight (corfu-doc :type git :host github :repo "galeo/corfu-doc")
-  :after corfu
-  :hook (corfu-mode . corfu-doc-mode)
-  :bind (:map corfu-map
-            ;; This is a manual toggle for the documentation popup.
-            ([remap corfu-show-documentation] . corfu-doc-toggle) ; Remap the default doc command
-            ;; Scroll in the documentation window
-            ("M-n" . corfu-doc-scroll-up)
-            ("M-p" . corfu-doc-scroll-down))
-  :custom
-  (corfu-doc-delay 0.5)
-  (corfu-doc-max-width 70)
-  (corfu-doc-max-height 20)
 
-  ;; NOTE 2022-02-05: I've also set this in the `corfu' use-package to be
-  ;; extra-safe that this is set when corfu-doc is loaded. I do not want
-  ;; documentation shown in both the echo area and in the `corfu-doc' popup.
-  (corfu-echo-documentation nil))
+(use-package corfu-popupinfo
+  :straight nil
+  :bind ( :map corfu-popupinfo-map
+          ("M-p" . corfu-popupinfo-scroll-down)
+          ("M-n" . corfu-popupinfo-scroll-up))
+  :hook (corfu-mode . corfu-popupinfo-mode)
+  :custom-face
+  (corfu-popupinfo ((t :height 1.0))))
 
-
-;; (use-package corfu-popupinfo
-;;   :straight nil
-;;   :bind ( :map corfu-popupinfo-map
-;;           ("M-p" . corfu-popupinfo-scroll-down)
-;;           ("M-n" . corfu-popupinfo-scroll-up))
-;;   :hook (corfu-mode . corfu-popupinfo-mode)
-;;   :custom-face
-;;   (corfu-popupinfo ((t :height 1.0))))
-
-;; (use-package corfu-terminal
-;;   :straight (corfu-terminal
-;;              :type git
-;;              :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
-;;   :unless (display-graphic-p)
-;;   :hook (after-init . corfu-terminal-mode))
+(use-package corfu-terminal
+  :straight (corfu-terminal
+             :type git
+             :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
+  :unless (display-graphic-p)
+  :hook (after-init . corfu-terminal-mode))
 
  ;; Use dabbrev with Corfu!
 (use-package dabbrev
