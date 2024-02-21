@@ -1,95 +1,95 @@
 ;;; lisp/init-tools.el --- Emacs Tools -*- lexical-binding: t -*-
 
 ;;; Tools
-(use-package project
-  :straight (:type built-in)
-  :bind-keymap ("s-p" . project-prefix-map)
-  :bind ( :map project-prefix-map
-          ("s" . project-save-some-buffers)
-          ("t" . eshell)
-          ("v" . magit)
-          ("s-p" . project-switch-project))
-  :bind (("C-c k" . #'project-kill-buffers)
-         ("C-c m" . #'project-compile)
-         ("C-x f" . #'find-file)
-         ("C-c F" . #'project-switch-project)
-         ("C-c R" . #'pt/recentf-in-project)
-         ("C-c f" . #'project-find-file))
-  :custom
-  ;; This is one of my favorite things: you can customize
-  ;; the options shown upon switching projects.
-  (project-switch-commands
-   '((project-find-file "Find file")
-     (magit-project-status "Magit" ?g)
-     (deadgrep "Grep" ?h)
-     (pt/project-run-vterm "vterm" ?t)
-     (project-dired "Dired" ?d)
-     (pt/recentf-in-project "Recently opened" ?r)))
-  (compilation-always-kill t)
-  (project-vc-merge-submodules nil)
-  (project-compilation-buffer-name-function 'project-prefixed-buffer-name)
-  (project-vc-extra-root-markers
-   '("Cargo.toml" "compile_commands.json"
-     "compile_flags.txt" "project.clj"
-     "deps.edn" "shadow-cljs.edn" "bb.edn"))
-  :preface
-  (defcustom project-compilation-mode nil
-    "Mode to run the `compile' command with."
-    :type 'symbol
-    :group 'project
-    :safe #'symbolp
-    :local t)
-  (defun project-save-some-buffers (&optional arg)
-    "Save some modified file-visiting buffers in the current project.
+;; (use-package project
+;;   :straight (:type built-in)
+;;   :bind-keymap ("s-p" . project-prefix-map)
+;;   :bind ( :map project-prefix-map
+;;           ("s" . project-save-some-buffers)
+;;           ("t" . eshell)
+;;           ("v" . magit)
+;;           ("s-p" . project-switch-project))
+;;   :bind (("C-c k" . #'project-kill-buffers)
+;;          ("C-c m" . #'project-compile)
+;;          ("C-x f" . #'find-file)
+;;          ("C-c F" . #'project-switch-project)
+;;          ("C-c R" . #'pt/recentf-in-project)
+;;          ("C-c f" . #'project-find-file))
+;;   :custom
+;;   ;; This is one of my favorite things: you can customize
+;;   ;; the options shown upon switching projects.
+;;   (project-switch-commands
+;;    '((project-find-file "Find file")
+;;      (magit-project-status "Magit" ?g)
+;;      (deadgrep "Grep" ?h)
+;;      (pt/project-run-vterm "vterm" ?t)
+;;      (project-dired "Dired" ?d)
+;;      (pt/recentf-in-project "Recently opened" ?r)))
+;;   (compilation-always-kill t)
+;;   (project-vc-merge-submodules nil)
+;;   (project-compilation-buffer-name-function 'project-prefixed-buffer-name)
+;;   (project-vc-extra-root-markers
+;;    '("Cargo.toml" "compile_commands.json"
+;;      "compile_flags.txt" "project.clj"
+;;      "deps.edn" "shadow-cljs.edn" "bb.edn"))
+;;   :preface
+;;   (defcustom project-compilation-mode nil
+;;     "Mode to run the `compile' command with."
+;;     :type 'symbol
+;;     :group 'project
+;;     :safe #'symbolp
+;;     :local t)
+;;   (defun project-save-some-buffers (&optional arg)
+;;     "Save some modified file-visiting buffers in the current project.
 
-Optional argument ARG (interactively, prefix argument) non-nil
-means save all with no questions."
-    (interactive "P")
-    (let* ((project-buffers (project-buffers (project-current)))
-           (pred (lambda () (memq (current-buffer) project-buffers))))
-      (funcall-interactively #'save-some-buffers arg pred)))
-  (define-advice compilation-start
-      (:filter-args (args) use-project-compilation-mode)
-    (let ((cmd (car args))
-          (mode (cadr args))
-          (rest (cddr args)))
-      (if (and (null mode) project-compilation-mode)
-          (append (list cmd project-compilation-mode) rest)
-        args)))
-  (define-advice project-root (:filter-return (project) abbreviate-project-root)
-    (abbreviate-file-name project))
-  (defun project-make-predicate-buffer-in-project-p ()
-    (let ((project-buffers (project-buffers (project-current))))
-      (lambda () (memq (current-buffer) project-buffers))))
-  (define-advice project-compile (:around (fn) save-project-buffers-only)
-    "Only ask to save project-related buffers."
-    (defvar compilation-save-buffers-predicate)
-    (let ((compilation-save-buffers-predicate
-           (project-make-predicate-buffer-in-project-p)))
-      (funcall fn)))
-  (define-advice recompile
-      (:around (fn &optional edit-command) save-project-buffers-only)
-    "Only ask to save project-related buffers if inside of a project."
-    (defvar compilation-save-buffers-predicate)
-    (let ((compilation-save-buffers-predicate
-           (if (project-current)
-               (project-make-predicate-buffer-in-project-p)
-             compilation-save-buffers-predicate)))
-      (funcall fn edit-command)))
-  :config
-  (defun gas/open-project nil
-    "Get a view of the project."
-    (interactive)
-    (dired (project-root (project-current)))
-    ;;(dirvish)
-    ;;(vterm-toggle-show)
-    (windmove-up)
-    (windmove-up))
-   ;;(setq project-switch-commands 'gas/open-project)
-  (add-to-list 'project-switch-commands
-               '(project-dired "Dired"))
-  (add-to-list 'project-switch-commands
-               '(project-switch-to-buffer "Switch buffer")))
+;; Optional argument ARG (interactively, prefix argument) non-nil
+;; means save all with no questions."
+;;     (interactive "P")
+;;     (let* ((project-buffers (project-buffers (project-current)))
+;;            (pred (lambda () (memq (current-buffer) project-buffers))))
+;;       (funcall-interactively #'save-some-buffers arg pred)))
+;;   (define-advice compilation-start
+;;       (:filter-args (args) use-project-compilation-mode)
+;;     (let ((cmd (car args))
+;;           (mode (cadr args))
+;;           (rest (cddr args)))
+;;       (if (and (null mode) project-compilation-mode)
+;;           (append (list cmd project-compilation-mode) rest)
+;;         args)))
+;;   (define-advice project-root (:filter-return (project) abbreviate-project-root)
+;;     (abbreviate-file-name project))
+;;   (defun project-make-predicate-buffer-in-project-p ()
+;;     (let ((project-buffers (project-buffers (project-current))))
+;;       (lambda () (memq (current-buffer) project-buffers))))
+;;   (define-advice project-compile (:around (fn) save-project-buffers-only)
+;;     "Only ask to save project-related buffers."
+;;     (defvar compilation-save-buffers-predicate)
+;;     (let ((compilation-save-buffers-predicate
+;;            (project-make-predicate-buffer-in-project-p)))
+;;       (funcall fn)))
+;;   (define-advice recompile
+;;       (:around (fn &optional edit-command) save-project-buffers-only)
+;;     "Only ask to save project-related buffers if inside of a project."
+;;     (defvar compilation-save-buffers-predicate)
+;;     (let ((compilation-save-buffers-predicate
+;;            (if (project-current)
+;;                (project-make-predicate-buffer-in-project-p)
+;;              compilation-save-buffers-predicate)))
+;;       (funcall fn edit-command)))
+;;   :config
+;;   (defun gas/open-project nil
+;;     "Get a view of the project."
+;;     (interactive)
+;;     (dired (project-root (project-current)))
+;;     ;;(dirvish)
+;;     ;;(vterm-toggle-show)
+;;     (windmove-up)
+;;     (windmove-up))
+;;    ;;(setq project-switch-commands 'gas/open-project)
+;;   (add-to-list 'project-switch-commands
+;;                '(project-dired "Dired"))
+;;   (add-to-list 'project-switch-commands
+;;                '(project-switch-to-buffer "Switch buffer")))
 
 (use-package projectile
  ;; :delight
