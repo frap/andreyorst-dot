@@ -9,7 +9,7 @@
   :straight (:type built-in)
   :init
   ;; Don't ping things that look like domain names.
-   (setq ffap-machine-p-known 'reject)    
+   (setq ffap-machine-p-known 'reject)
    :hook (on-first-input . ffap-bindings))
 
 (use-package dired
@@ -57,7 +57,7 @@
     (setq dired-dwim-target t))
 
 (use-package files
-  :straight (:type built-in)  
+  :straight (:type built-in)
   :preface
   (setq
    ;; more info in completions
@@ -76,7 +76,7 @@
    apropos-do-all t                  ; Shows all options when running apropos
    message-log-max 1000
    fill-column 80
-   
+
    column-number-mode t              ; show (line,column) in mode-line.
    cua-selection-mode t              ; delete regions.
    ;; allow commands to be run on minibuffers.
@@ -156,10 +156,10 @@
                          (name . "^\\*scratch\\*$")
                          (name . "^\\*Messages\\*$")))
                ))))
-  
+
   ;; Switching to ibuffer puts the cursor on the most recent buffer
- (defadvice ibuffer
-     (around ibuffer-point-to-most-recent) ()
+ (define-advice ibuffer
+     (:around ibuffer-point-to-most-recent) ()
      "Open ibuffer with cursor pointed to most recent buffer name.
    This advice sets the cursor position to the name of the most recently
    visited buffer when ibuffer is called. This makes it easier to quickly
