@@ -85,10 +85,10 @@ If you experience stuttering, increase this.")
             (add-hook 'emacs-startup-hook #'gas/display-startup-time)))
 
 ;; load PATH from shell
-(if (not (getenv "TERM_PROGRAM"))
-    (setenv "PATH"
-            (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
-(setq exec-path (split-string (getenv "PATH") ":"))
+;; (if (not (getenv "TERM_PROGRAM"))
+;;     (setenv "PATH"
+;;             (shell-command-to-string "source $HOME/.config/shell/interactive ; printf $PATH")))
+;; (setq exec-path (split-string (getenv "PATH") ":"))
 
 (require 'init-bindings)
 (require 'init-files-buffers)
